@@ -25,7 +25,7 @@
     urlcolor=black     % Color for URL links
 }
 
-\title{Likelihood-Propagation Inference: An Information-Geometric Framework for Sequential Estimation}
+\title{Fisher Flow: An Information-Geometric Framework for Sequential Estimation}
 \author{Alex Towell \\ \texttt{atowell@siue.edu}}
 \date{May 19, 2025}
 
@@ -34,7 +34,7 @@
 \maketitle
 
 \begin{abstract}
-We present Likelihood-Propagation Inference (LPI), a framework for sequential statistical inference that propagates Fisher information rather than probability distributions. LPI provides a computationally efficient alternative to Bayesian updating while maintaining rigorous uncertainty quantification. The key insight is that for parameter estimation, the Fisher Information Matrix serves as a sufficient statistic for uncertainty, enabling closed-form sequential updates through simple matrix operations. We prove that LPI: (i) achieves the Cramér-Rao efficiency bound asymptotically, (ii) recovers exact Bayesian posteriors for exponential families, and (iii) unifies modern optimization methods (Adam, natural gradient, elastic weight consolidation) under information-geometric principles. Empirical validation on neural network training and online learning tasks demonstrates 10-100x speedups over variational inference with comparable uncertainty estimates. The framework's theoretical elegance and practical efficiency make it particularly suitable for large-scale machine learning where full Bayesian inference is intractable.
+We present Fisher Flow (FF), a framework for sequential statistical inference that propagates Fisher information rather than probability distributions. Fisher Flow provides a computationally efficient alternative to Bayesian updating while maintaining rigorous uncertainty quantification. The key insight is that for parameter estimation, the Fisher Information Matrix serves as a sufficient statistic for uncertainty, enabling closed-form sequential updates through simple matrix operations. We prove that Fisher Flow: (i) achieves the Cramér-Rao efficiency bound asymptotically, (ii) recovers exact Bayesian posteriors for exponential families, and (iii) unifies modern optimization methods (Adam, natural gradient, elastic weight consolidation) under information-geometric principles. Empirical validation on neural network training and online learning tasks demonstrates 10-100x speedups over variational inference with comparable uncertainty estimates. The framework's theoretical elegance and practical efficiency make it particularly suitable for large-scale machine learning where full Bayesian inference is intractable.
 \end{abstract}
 
 \section{Introduction}
@@ -45,13 +45,13 @@ Consider a streaming data scenario where we observe pairs $(x_t, y_t)$ sequentia
 
 \textbf{Bayesian approach:} Maintain posterior $p(\theta|\text{data}_{1:t})$, requiring $\mathcal{O}(d^2)$ storage and $\mathcal{O}(d^3)$ computation per update.
 
-\textbf{LPI approach:} Maintain only $(\hat{\theta}_t, \mathcal{I}_t)$ where:
+\textbf{Fisher Flow approach:} Maintain only $(\hat{\theta}_t, \mathcal{I}_t)$ where:
 \begin{align}
 \mathcal{I}_t &= \mathcal{I}_{t-1} + \frac{1}{\sigma^2}x_t x_t^\top & \text{(information update)}\\
 \hat{\theta}_t &= \hat{\theta}_{t-1} + \mathcal{I}_t^{-1}x_t(y_t - x_t^\top\hat{\theta}_{t-1})/\sigma^2 & \text{(parameter update)}
 \end{align}
 
-Both approaches yield identical point estimates and uncertainty quantification for Gaussian models, but LPI extends naturally to non-Gaussian likelihoods where Bayesian updates lack closed forms.
+Both approaches yield identical point estimates and uncertainty quantification for Gaussian models, but Fisher Flow extends naturally to non-Gaussian likelihoods where Bayesian updates lack closed forms.
 
 \subsection{Problem Statement and Motivation}
 
@@ -66,9 +66,9 @@ Both approaches yield identical point estimates and uncertainty quantification f
 
 Bayesian inference addresses (2) but struggles with (1), (3), and (4). Stochastic gradient methods handle (1) and (3) but lack principled uncertainty quantification.
 
-\textbf{Our Solution:} LPI bridges this gap by propagating Fisher information—a quadratic approximation to the log-posterior curvature—rather than full distributions. This provides uncertainty estimates while maintaining computational efficiency.
+\textbf{Our Solution:} Fisher Flow bridges this gap by propagating Fisher information—a quadratic approximation to the log-posterior curvature—rather than full distributions. This provides uncertainty estimates while maintaining computational efficiency.
 
-We formalize \textbf{Likelihood-Propagation Inference (LPI)}, a framework that operates on the statistical manifold $\mathcal{M} = \{p_\theta : \theta \in \Theta\}$ equipped with the Fisher-Rao metric. Rather than propagating probability distributions, LPI propagates Fisher information—the fundamental geometric quantity encoding statistical distinguishability. This shift from measure-theoretic to geometric foundations yields:
+We formalize \textbf{Fisher Flow (FF)}, a framework that operates on the statistical manifold $\mathcal{M} = \{p_\theta : \theta \in \Theta\}$ equipped with the Fisher-Rao metric. Rather than propagating probability distributions, Fisher Flow propagates Fisher information—the fundamental geometric quantity encoding statistical distinguishability. This shift from measure-theoretic to geometric foundations yields:
 
 \begin{itemize}
 \item \textbf{Geometric invariance}: Updates are covariant under reparameterization
@@ -80,8 +80,8 @@ We formalize \textbf{Likelihood-Propagation Inference (LPI)}, a framework that o
 \subsection{Theoretical Contributions}
 This work makes several theoretical contributions:
 \begin{enumerate}
-\item We axiomatize LPI from first principles of information geometry, showing how maximum likelihood estimation naturally emerges as geodesic flow on statistical manifolds.
-\item We prove that LPI achieves identical asymptotic efficiency to Bayesian inference with Jeffreys prior, while requiring only local computations.
+\item We axiomatize Fisher Flow from first principles of information geometry, showing how maximum likelihood estimation naturally emerges as geodesic flow on statistical manifolds.
+\item We prove that Fisher Flow achieves identical asymptotic efficiency to Bayesian inference with Jeffreys prior, while requiring only local computations.
 \item We establish precise connections to natural gradient descent \cite{amari1998natural}, elastic weight consolidation \cite{kirkpatrick2017overcoming}, and second-order optimization methods.
 \item We characterize the approximation error when the exact information geometry must be relaxed for computational tractability.
 \end{enumerate}
@@ -101,7 +101,7 @@ $\ell_n(\theta)$ & Log-likelihood: $\sum_{i=1}^n \log p(x_i|\theta)$ \\
 $s_n(\theta)$ & Score (gradient): $\nabla_\theta \ell_n(\theta)$ \\
 $\mathcal{I}(\theta)$ & Expected Fisher Information: $\mathbb{E}[s(\theta)s(\theta)^\top]$ \\
 $\hat{\mathcal{I}}_n(\theta)$ & Observed Fisher Information: $-\nabla^2_\theta \ell_n(\theta)$ \\
-$\hat{\theta}_n$ & LPI estimate after $n$ observations \\
+$\hat{\theta}_n$ & FF estimate after $n$ observations \\
 $\mathcal{I}_n$ & Accumulated information after $n$ observations \\
 \bottomrule
 \end{tabular}
@@ -129,7 +129,7 @@ under regularity conditions ensuring the interchange of differentiation and inte
 
 \begin{table}[h!]
 \centering
-\caption{Core Mathematical Objects in LPI}
+\caption{Core Mathematical Objects in Fisher Flow}
 \begin{tabular}{lll}
 \toprule
 Symbol & Definition & Geometric Interpretation \\
@@ -177,11 +177,11 @@ By independence, $p(x_1, \ldots, x_n|\theta) = \prod_{i=1}^n p(x_i|\theta)$. Thu
 \end{align}
 \end{proof}
 
-\section{LPI in Plain English: The Core Insight}
+\section{Fisher Flow in Plain English: The Core Insight}
 
 \subsection{The Fundamental Pattern}
 
-Forget the mathematical machinery for a moment. Here's what LPI actually does:
+Forget the mathematical machinery for a moment. Here's what Fisher Flow actually does:
 
 \textbf{The Problem:} You're estimating unknown parameters from data that arrives piece by piece. You want to know both your best guess AND how confident you should be about that guess.
 
@@ -208,11 +208,11 @@ How do you combine these estimates? You weight them by confidence:
 \text{Best guess} = \frac{500 \times \frac{1}{50^2} + 450 \times \frac{1}{100^2} + 480 \times \frac{1}{30^2}}{\frac{1}{50^2} + \frac{1}{100^2} + \frac{1}{30^2}} \approx 487
 \end{equation*}
 
-LPI does exactly this, but for model parameters. The "confidence" is the Fisher Information—essentially measuring how sharply the likelihood peaks around the best estimate.
+Fisher Flow does exactly this, but for model parameters. The "confidence" is the Fisher Information—essentially measuring how sharply the likelihood peaks around the best estimate.
 
 \subsection{Why This Matters: The Power of a Name}
 
-Before LPI had a name, people were:
+Before Fisher Flow had a name, people were:
 \begin{itemize}
 \item Using "approximate Bayesian methods" (but they weren't really Bayesian)
 \item Calling it "recursive estimation" (missing the geometric insight)
@@ -223,44 +223,44 @@ Before LPI had a name, people were:
 By recognizing and naming the pattern—\textbf{propagating information rather than distributions}—we suddenly see:
 
 \begin{enumerate}
-\item \textbf{Adam is diagonal LPI:} Those running averages of squared gradients? They're estimating diagonal Fisher information!
-\item \textbf{Natural gradient is exact LPI:} Using the full Fisher Information Matrix
-\item \textbf{Elastic Weight Consolidation is LPI memory:} Remembering important parameters through their information
-\item \textbf{Kalman filtering is linear LPI:} The classical algorithm is just LPI for linear-Gaussian models
+\item \textbf{Adam is diagonal Fisher Flow:} Those running averages of squared gradients? They're estimating diagonal Fisher information!
+\item \textbf{Natural gradient is exact Fisher Flow:} Using the full Fisher Information Matrix
+\item \textbf{Elastic Weight Consolidation is Fisher Flow memory:} Remembering important parameters through their information
+\item \textbf{Kalman filtering is linear Fisher Flow:} The classical algorithm is just Fisher Flow for linear-Gaussian models
 \end{enumerate}
 
-\subsection{The LPI Taxonomy: A Family of Methods}
+\subsection{The Fisher Flow Taxonomy: A Family of Methods}
 
 Once we recognize the pattern, we can systematically explore variations:
 
 \begin{center}
-\textbf{The LPI Family Tree}
+\textbf{The Fisher Flow Family Tree}
 \end{center}
 
 \begin{itemize}
 \item \textbf{By Information Structure:}
   \begin{itemize}
-  \item \textit{Scalar LPI:} One learning rate for all parameters (SGD)
-  \item \textit{Diagonal LPI:} Per-parameter learning rates (Adam, RMSprop)
-  \item \textit{Block LPI:} Groups of parameters share information (Layer-wise methods)
-  \item \textit{Structured LPI:} Exploit model structure (Kronecker-factored)
-  \item \textit{Full LPI:} Complete information matrix (Natural gradient)
+  \item \textit{Scalar FF:} One learning rate for all parameters (SGD)
+  \item \textit{Diagonal FF:} Per-parameter learning rates (Adam, RMSprop)
+  \item \textit{Block FF:} Groups of parameters share information (Layer-wise methods)
+  \item \textit{Structured FF:} Exploit model structure (Kronecker-factored)
+  \item \textit{Full FF:} Complete information matrix (Natural gradient)
   \end{itemize}
   
 \item \textbf{By Time Dynamics:}
   \begin{itemize}
-  \item \textit{Stationary LPI:} Information accumulates forever
-  \item \textit{Windowed LPI:} Only recent information matters
-  \item \textit{Exponential LPI:} Gradual forgetting (moving averages)
-  \item \textit{Adaptive LPI:} Change detection triggers reset
+  \item \textit{Stationary FF:} Information accumulates forever
+  \item \textit{Windowed FF:} Only recent information matters
+  \item \textit{Exponential FF:} Gradual forgetting (moving averages)
+  \item \textit{Adaptive FF:} Change detection triggers reset
   \end{itemize}
   
 \item \textbf{By Approximation Type:}
   \begin{itemize}
-  \item \textit{Monte Carlo LPI:} Sample-based information estimates
-  \item \textit{Factored LPI:} Assume independence between groups
-  \item \textit{Low-rank LPI:} Capture dominant directions only
-  \item \textit{Sparse LPI:} Only track significant interactions
+  \item \textit{Monte Carlo FF:} Sample-based information estimates
+  \item \textit{Factored FF:} Assume independence between groups
+  \item \textit{Low-rank FF:} Capture dominant directions only
+  \item \textit{Sparse FF:} Only track significant interactions
   \end{itemize}
 \end{itemize}
 
@@ -280,7 +280,7 @@ This shift in perspective—from thinking about probability distributions to thi
 \begin{center}
 \begin{tabular}{lll}
 \toprule
-\textbf{Traditional View} & \textbf{LPI View} & \textbf{Benefit} \\
+\textbf{Traditional View} & \textbf{Fisher Flow View} & \textbf{Benefit} \\
 \midrule
 Update posterior & Add information & Linear algebra \\
 Marginalize & Project & Matrix multiplication \\
@@ -292,22 +292,22 @@ Compute credible intervals & Invert information & Matrix inversion \\
 
 \subsection{When to Use What: A Practical Guide}
 
-The LPI framework helps us choose methods systematically:
+The Fisher Flow framework helps us choose methods systematically:
 
-\textbf{Few parameters, lots of data?} → Full LPI (natural gradient)
-\textbf{Many parameters, limited memory?} → Diagonal LPI (Adam)
-\textbf{Neural network layers?} → Kronecker LPI (K-FAC)
-\textbf{Continual learning?} → LPI with memory (EWC)
-\textbf{Online learning?} → Exponential forgetting LPI
+\textbf{Few parameters, lots of data?} → Full Fisher Flow (natural gradient)
+\textbf{Many parameters, limited memory?} → Diagonal Fisher Flow (Adam)
+\textbf{Neural network layers?} → Kronecker Fisher Flow (K-FAC)
+\textbf{Continual learning?} → Fisher Flow with memory (EWC)
+\textbf{Online learning?} → Exponential forgetting FF
 \textbf{Distributed training?} → Aggregate local information matrices
 
 The beauty is that these aren't ad-hoc choices—they're principled approximations of the same underlying concept.
 
-\section{The Likelihood-Propagation Framework}
+\section{The Fisher Flow Framework}
 
 \subsection{Axiomatic Foundation}
 
-We axiomatize LPI through three fundamental principles:
+We axiomatize Fisher Flow through three fundamental principles:
 
 \begin{axiom}[Information Monotonicity]
 For any data sequence $x_1, x_2, \ldots$, the accumulated information $\mathcal{I}_t$ is non-decreasing: $\mathcal{I}_{t+1} \succeq \mathcal{I}_t$ (in the positive semi-definite ordering).
@@ -323,8 +323,8 @@ Updates depend only on local geometric quantities (score and curvature) at the c
 
 \subsection{Core Update Equations}
 
-\begin{definition}[LPI State]
-The state of the LPI system at time $t$ is the tuple $(\hat{\theta}_t, \mathcal{I}_t)$ where:
+\begin{definition}[Fisher Flow State]
+The state of the Fisher Flow system at time $t$ is the tuple $(\hat{\theta}_t, \mathcal{I}_t)$ where:
 \begin{itemize}
 \item $\hat{\theta}_t \in \Theta$ is the current parameter estimate
 \item $\mathcal{I}_t \in \mathbb{S}^d_{++}$ is the accumulated Fisher information matrix
@@ -333,7 +333,7 @@ The state of the LPI system at time $t$ is the tuple $(\hat{\theta}_t, \mathcal{
 
 \begin{theorem}[Natural Gradient Flow]
 \label{thm:natural_gradient}
-The LPI update equation
+The Fisher Flow update equation
 \begin{equation}
 \hat{\theta}_{t+1} = \hat{\theta}_t - \eta_t \mathcal{I}_t^{-1} s_t(\hat{\theta}_t)
 \end{equation}
@@ -383,7 +383,7 @@ Solving yields the stated formula. Optimality follows from the Gauss-Markov theo
 \subsection{Sequential Update Algorithm}
 
 \begin{algorithm}[h]
-\caption{LPI Sequential Update}
+\caption{Fisher Flow Sequential Update}
 \label{alg:lpi_sequential}
 \begin{algorithmic}[1]
 \Require Initial state $(\hat{\theta}_0, \mathcal{I}_0)$, data stream $\{B_t\}_{t=1}^T$
@@ -404,9 +404,9 @@ Solving yields the stated formula. Optimality follows from the Gauss-Markov theo
 
 \subsection{Consistency and Asymptotic Normality}
 
-\begin{theorem}[Strong Consistency of LPI]
+\begin{theorem}[Strong Consistency of Fisher Flow]
 \label{thm:consistency}
-Under Assumption \ref{ass:regularity}, the LPI estimator $\hat{\theta}_n$ satisfies:
+Under Assumption \ref{ass:regularity}, the Fisher Flow estimator $\hat{\theta}_n$ satisfies:
 \begin{equation}
 \hat{\theta}_n \xrightarrow{a.s.} \theta_0 \quad \text{as } n \to \infty
 \end{equation}
@@ -419,7 +419,7 @@ The proof follows from the strong law of large numbers applied to the score func
 
 \begin{theorem}[Asymptotic Normality and Efficiency]
 \label{thm:asymptotic_normality}
-For the LPI estimator $\hat{\theta}_n$ with accumulated information $\mathcal{I}_n$:
+For the Fisher Flow estimator $\hat{\theta}_n$ with accumulated information $\mathcal{I}_n$:
 \begin{equation}
 \sqrt{n}(\hat{\theta}_n - \theta_0) \xrightarrow{d} \mathcal{N}(0, \mathcal{I}(\theta_0)^{-1})
 \end{equation}
@@ -462,52 +462,52 @@ An approximate information matrix $\tilde{\mathcal{I}}$ is $(\epsilon, \delta)$-
 
 \begin{theorem}[Robustness to Information Approximation]
 \label{thm:approximation}
-If LPI uses $(\epsilon, \delta)$-approximate information with $\epsilon < 1$, then:
+If Fisher Flow uses $(\epsilon, \delta)$-approximate information with $\epsilon < 1$, then:
 \begin{equation}
 \|\tilde{\theta}_n - \hat{\theta}_n\|_{\mathcal{I}} \leq \frac{\epsilon}{1-\epsilon}\|\hat{\theta}_n - \theta_0\|_{\mathcal{I}} + \mathcal{O}(\delta/\sqrt{n})
 \end{equation}
-where $\tilde{\theta}_n$ is the approximate LPI estimator.
+where $\tilde{\theta}_n$ is the approximate Fisher Flow estimator.
 \end{theorem}
 
 \section{Related Work}
 
 \subsection{Historical Development}
 
-The roots of LPI trace back to Fisher's original work on information \cite{fisher1925statistical} and Rao's geometric interpretation \cite{rao1945information}. The recursive estimation literature in control theory \cite{ljung1983theory} developed similar update equations, though without the unifying information-geometric perspective.
+The roots of Fisher Flow trace back to Fisher's original work on information \cite{fisher1925statistical} and Rao's geometric interpretation \cite{rao1945information}. The recursive estimation literature in control theory \cite{ljung1983theory} developed similar update equations, though without the unifying information-geometric perspective.
 
 \subsection{Natural Gradient Methods}
 
-Amari's natural gradient \cite{amari1998natural} is essentially LPI with continuous-time updates. Martens \cite{martens2015optimizing} developed practical approximations (K-FAC) that can be viewed as structured LPI. Our contribution is unifying these methods under the information propagation framework.
+Amari's natural gradient \cite{amari1998natural} is essentially Fisher Flow with continuous-time updates. Martens \cite{martens2015optimizing} developed practical approximations (K-FAC) that can be viewed as structured Fisher Flow. Our contribution is unifying these methods under the information propagation framework.
 
 \subsection{Connections to Modern Deep Learning}
 
-Recent work on second-order optimization \cite{botev2017practical}, uncertainty quantification \cite{zhang2018noisy}, and continual learning \cite{kirkpatrick2017overcoming} independently rediscovered aspects of LPI. We show these are special cases of a general principle.
+Recent work on second-order optimization \cite{botev2017practical}, uncertainty quantification \cite{zhang2018noisy}, and continual learning \cite{kirkpatrick2017overcoming} independently rediscovered aspects of Fisher Flow. We show these are special cases of a general principle.
 
 \section{Deep Parallels to Bayesian Inference}
 
-While LPI is philosophically frequentist, its operational structure reveals deep parallels with Bayesian inference. These parallels highlight how LPI achieves similar inferential goals through different theoretical machinery:
+While Fisher Flow is philosophically frequentist, its operational structure reveals deep parallels with Bayesian inference. These parallels highlight how Fisher Flow achieves similar inferential goals through different theoretical machinery:
 
 \begin{itemize}
     \item \textbf{Incorporation of Prior Knowledge vs. Initial State:}
-    In Bayesian inference, prior beliefs about parameters are formally encoded in a prior distribution, $p(\theta)$. LPI, in its pure form, does not use subjective priors. However, the initial state of the aggregate estimate $(\hat\theta_0, \mathcal{I}_0)$ can be set using prior information, or regularization terms (Section 6) can act as pseudo-priors, with the Hessian of the regularizer contributing to the initial information matrix. This provides a mechanism, albeit different in interpretation, to incorporate pre-existing knowledge or to stabilize estimates in low-data regimes.
+    In Bayesian inference, prior beliefs about parameters are formally encoded in a prior distribution, $p(\theta)$. Fisher Flow, in its pure form, does not use subjective priors. However, the initial state of the aggregate estimate $(\hat\theta_0, \mathcal{I}_0)$ can be set using prior information, or regularization terms (Section 6) can act as pseudo-priors, with the Hessian of the regularizer contributing to the initial information matrix. This provides a mechanism, albeit different in interpretation, to incorporate pre-existing knowledge or to stabilize estimates in low-data regimes.
 
     \item \textbf{Data Assimilation:}
-    Bayesian inference assimilates new data by multiplying the prior distribution with the likelihood function and then normalizing to obtain the posterior distribution, $p(\theta|x) \propto p(x|\theta)p(\theta)$. LPI, in contrast, assimilates data by \textit{adding} the score (gradient of log-likelihood) and Fisher Information from the new data batch to the existing aggregate quantities (Equations 5 and 6). This additive combination of information is algebraically simpler than the multiplicative and normalization steps in Bayesian updating.
+    Bayesian inference assimilates new data by multiplying the prior distribution with the likelihood function and then normalizing to obtain the posterior distribution, $p(\theta|x) \propto p(x|\theta)p(\theta)$. Fisher Flow, in contrast, assimilates data by \textit{adding} the score (gradient of log-likelihood) and Fisher Information from the new data batch to the existing aggregate quantities (Equations 5 and 6). This additive combination of information is algebraically simpler than the multiplicative and normalization steps in Bayesian updating.
 
     \item \textbf{Parameter Estimation (Central Tendency):}
-    The Bayesian posterior mean, $\mathbb{E}[\theta|x]$, often serves as the Bayesian point estimate for $\theta$. In LPI, the Maximum Likelihood Estimate, $\hat{\theta}$, which is the mode of the likelihood (and asymptotically the mode of the posterior under certain conditions), plays this role. LPI's sequential updates (Equation 6) show $\hat{\theta}_t$ as an information-weighted average of the previous estimate and the estimate from the new batch, akin to how posterior means are updated in Gaussian conjugate models.
+    The Bayesian posterior mean, $\mathbb{E}[\theta|x]$, often serves as the Bayesian point estimate for $\theta$. In Fisher Flow, the Maximum Likelihood Estimate, $\hat{\theta}$, which is the mode of the likelihood (and asymptotically the mode of the posterior under certain conditions), plays this role. Fisher Flow's sequential updates (Equation 6) show $\hat{\theta}_t$ as an information-weighted average of the previous estimate and the estimate from the new batch, akin to how posterior means are updated in Gaussian conjugate models.
 
     \item \textbf{Uncertainty Quantification (Dispersion):}
-    Bayesian inference quantifies uncertainty about $\theta$ via the posterior covariance matrix, which is the inverse of the posterior precision matrix. In LPI, the Fisher Information Matrix (FIM), $\mathcal{I}(\theta)$, serves as the analogue of precision. Its inverse, $\mathcal{I}^{-1}(\theta)$, provides an (asymptotic) covariance matrix for the MLE $\hat{\theta}$, directly quantifying parameter uncertainty.
+    Bayesian inference quantifies uncertainty about $\theta$ via the posterior covariance matrix, which is the inverse of the posterior precision matrix. In Fisher Flow, the Fisher Information Matrix (FIM), $\mathcal{I}(\theta)$, serves as the analogue of precision. Its inverse, $\mathcal{I}^{-1}(\theta)$, provides an (asymptotic) covariance matrix for the MLE $\hat{\theta}$, directly quantifying parameter uncertainty.
 
     \item \textbf{Sequential Updating and Conjugacy:}
-    Bayesian conjugate updates offer closed-form solutions for the posterior when the prior and likelihood belong to compatible distributional families (e.g., Beta-Bernoulli, Normal-Normal). LPI achieves a similar operational simplicity through the additive nature of information (Equation 5 and 6). The updates for $\hat{\theta}_t$ and $\mathcal{I}_t$ are always closed-form (given batch estimates), regardless of the specific likelihood's family, assuming regularity conditions hold. This mirrors the computational ease of conjugate Bayesian models without being restricted to them.
+    Bayesian conjugate updates offer closed-form solutions for the posterior when the prior and likelihood belong to compatible distributional families (e.g., Beta-Bernoulli, Normal-Normal). Fisher Flow achieves a similar operational simplicity through the additive nature of information (Equation 5 and 6). The updates for $\hat{\theta}_t$ and $\mathcal{I}_t$ are always closed-form (given batch estimates), regardless of the specific likelihood's family, assuming regularity conditions hold. This mirrors the computational ease of conjugate Bayesian models without being restricted to them.
 
     \item \textbf{Predictive Distributions:}
-    To make predictions for new data $x_{\text{new}}$, Bayesian methods integrate over the posterior distribution of parameters: $p(x_{\text{new}}|x) = \int p(x_{\text{new}}|\theta)p(\theta|x)d\theta$. LPI typically uses a "plug-in" approach, $p(x_{\text{new}}|\hat{\theta})$, using the point estimate $\hat{\theta}$. However, as discussed in Section 9.3.1, parameter uncertainty from $\mathcal{I}^{-1}$ can be propagated via sampling or Laplace approximations \cite{tierney1986accurate} to generate richer predictive distributions that account for parameter uncertainty, thereby approaching the comprehensiveness of Bayesian predictive distributions.
+    To make predictions for new data $x_{\text{new}}$, Bayesian methods integrate over the posterior distribution of parameters: $p(x_{\text{new}}|x) = \int p(x_{\text{new}}|\theta)p(\theta|x)d\theta$. Fisher Flow typically uses a "plug-in" approach, $p(x_{\text{new}}|\hat{\theta})$, using the point estimate $\hat{\theta}$. However, as discussed in Section 9.3.1, parameter uncertainty from $\mathcal{I}^{-1}$ can be propagated via sampling or Laplace approximations \cite{tierney1986accurate} to generate richer predictive distributions that account for parameter uncertainty, thereby approaching the comprehensiveness of Bayesian predictive distributions.
 
     \item \textbf{Semantic Interpretation of Uncertainty:}
-    A key philosophical difference lies in the interpretation of uncertainty. Bayesian posterior probabilities represent degrees of \textit{epistemic belief} about the parameters given the observed data and prior. The uncertainty quantified by LPI (e.g., confidence intervals derived from $\mathcal{I}^{-1}$) reflects \textit{sampling variability}---how much the estimate $\hat{\theta}$ would vary if one were to repeat the data collection process under the same underlying true parameters $\theta_0$.
+    A key philosophical difference lies in the interpretation of uncertainty. Bayesian posterior probabilities represent degrees of \textit{epistemic belief} about the parameters given the observed data and prior. The uncertainty quantified by Fisher Flow (e.g., confidence intervals derived from $\mathcal{I}^{-1}$) reflects \textit{sampling variability}---how much the estimate $\hat{\theta}$ would vary if one were to repeat the data collection process under the same underlying true parameters $\theta_0$.
 \end{itemize}
 
 The following table provides a concise summary of these parallels:
@@ -516,7 +516,7 @@ The following table provides a concise summary of these parallels:
 \centering
 \begin{tabular}{l m{4.2cm} m{5.8cm}} 
 \toprule
-Concept & Bayesian & LPI (Frequentist) \\
+Concept & Bayesian & Fisher Flow (Frequentist) \\
 \midrule
 Initial State & Prior $p(\theta)$ & Initial $(\hat\theta_0, \mathcal{I}_0)$ / regularizer \\
 Central Estimate & $\mathbb E[\theta\mid x]$ & $\hat\theta_{t} \leftarrow \hat{\mathcal I}_{t}^{-1}\bigl(\hat{\mathcal I}_{t-1}\hat\theta_{t-1} + \hat{\mathcal I}_{B_t}\hat\theta_{B_t}\bigr)$ \\
@@ -525,40 +525,40 @@ Predictive Distribution & $\int p(x_{\text{new}}|\theta)p(\theta|x)d\theta$ & Pl
 Semantics of Uncertainty & Epistemic belief & Sampling variability \\
 \bottomrule
 \end{tabular}
-\caption{Summary of Parallels between Bayesian Inference and LPI}
+\caption{Summary of Parallels between Bayesian Inference and Fisher Flow}
 \label{tab:bayes_lpi_parallels}
 \end{table}
 
-\textbf{Note:} A particularly strong connection emerges when considering the Jeffreys prior, $p(\theta)\propto\sqrt{\det\mathcal I(\theta)}$ \cite{jeffreys1939theory, robert2007bayesian}. With this non-informative prior, the Bayesian posterior mode and the inverse of the posterior curvature (as a measure of covariance) asymptotically match the MLE $\hat{\theta}$ and $\mathcal{I}^{-1}(\hat{\theta})$ from LPI. This reinforces the idea that LPI, while frequentist, often arrives at similar quantitative conclusions as a data-dominated Bayesian analysis, especially in large-sample regimes.
+\textbf{Note:} A particularly strong connection emerges when considering the Jeffreys prior, $p(\theta)\propto\sqrt{\det\mathcal I(\theta)}$ \cite{jeffreys1939theory, robert2007bayesian}. With this non-informative prior, the Bayesian posterior mode and the inverse of the posterior curvature (as a measure of covariance) asymptotically match the MLE $\hat{\theta}$ and $\mathcal{I}^{-1}(\hat{\theta})$ from Fisher Flow. This reinforces the idea that Fisher Flow, while frequentist, often arrives at similar quantitative conclusions as a data-dominated Bayesian analysis, especially in large-sample regimes.
 
 \section{Theoretical Guarantees and Limitations}
 
-\subsection{When LPI Fails: Limitations and Failure Modes}
+\subsection{When Fisher Flow Fails: Limitations and Failure Modes}
 
 \begin{example}[Mixture Models]
-Consider a Gaussian mixture $p(x|\theta) = \pi \mathcal{N}(\mu_1, 1) + (1-\pi)\mathcal{N}(\mu_2, 1)$. Near $\pi = 0$ or $\pi = 1$, the Fisher information becomes singular, causing LPI to fail. Bayesian methods with appropriate priors remain stable.
+Consider a Gaussian mixture $p(x|\theta) = \pi \mathcal{N}(\mu_1, 1) + (1-\pi)\mathcal{N}(\mu_2, 1)$. Near $\pi = 0$ or $\pi = 1$, the Fisher information becomes singular, causing Fisher Flow to fail. Bayesian methods with appropriate priors remain stable.
 \end{example}
 
 \begin{example}[Heavy-Tailed Data]
-For Cauchy-distributed errors, the Fisher information may not exist. LPI requires modification to robust estimators, while Bayesian methods naturally accommodate heavy tails through the likelihood.
+For Cauchy-distributed errors, the Fisher information may not exist. Fisher Flow requires modification to robust estimators, while Bayesian methods naturally accommodate heavy tails through the likelihood.
 \end{example}
 
 \subsection{Optimality Properties}
 
 \begin{theorem}[Information-Theoretic Optimality]
 \label{thm:info_optimality}
-Among all estimators that use only first and second-order information, LPI achieves the minimum expected KL divergence from the true distribution:
+Among all estimators that use only first and second-order information, Fisher Flow achieves the minimum expected KL divergence from the true distribution:
 \begin{equation}
-\hat{\theta}_{\text{LPI}} = \arg\min_{\hat{\theta} \in \mathcal{E}_2} \mathbb{E}[D_{KL}(p_{\theta_0} \| p_{\hat{\theta}})]
+\hat{\theta}_{\text{FF}} = \arg\min_{\hat{\theta} \in \mathcal{E}_2} \mathbb{E}[D_{KL}(p_{\theta_0} \| p_{\hat{\theta}})]
 \end{equation}
 where $\mathcal{E}_2$ is the class of second-order estimators.
 \end{theorem}
 
 \begin{theorem}[Invariance Properties]
-LPI satisfies:
+Fisher Flow satisfies:
 \begin{enumerate}
 \item \textbf{Parameterization invariance}: Updates are covariant under smooth reparameterizations
-\item \textbf{Sufficiency preservation}: If $T(X)$ is sufficient for $\theta$, LPI based on $T(X)$ equals LPI based on $X$
+\item \textbf{Sufficiency preservation}: If $T(X)$ is sufficient for $\theta$, Fisher Flow based on $T(X)$ equals Fisher Flow based on $X$
 \item \textbf{Information monotonicity}: $\mathcal{I}_{t+1} \succeq \mathcal{I}_t$ in the positive semi-definite ordering
 \end{enumerate}
 \end{theorem}
@@ -586,7 +586,7 @@ Consider adversarial construction where true $\mathcal{I}$ has eigenvalues spann
 \caption{Theoretical Properties of Inference Frameworks}
 \begin{tabular}{lccc}
 \toprule
-\textbf{Property} & \textbf{Full Bayes} & \textbf{LPI} & \textbf{MAP} \\
+\textbf{Property} & \textbf{Full Bayes} & \textbf{FF} & \textbf{MAP} \\
 \midrule
 Coherence & \checkmark & Asymptotic & $\times$ \\
 Computational tractability & $\times$ & \checkmark & \checkmark \\
@@ -602,7 +602,7 @@ Non-regular models & \checkmark & $\times$ & $\times$ \\
 
 \subsection{Connection to Thermodynamic Principles}
 
-LPI exhibits profound connections to statistical mechanics and thermodynamics:
+Fisher Flow exhibits profound connections to statistical mechanics and thermodynamics:
 
 \begin{theorem}[Information as Statistical Entropy]
 The log-determinant of Fisher information relates to the entropy of the parameter distribution:
@@ -612,26 +612,26 @@ S(\theta) = \frac{k}{2}\log\det(2\pi e \mathcal{I}^{-1})
 where $k$ is a scaling constant (analogous to Boltzmann's constant).
 \end{theorem}
 
-This connection suggests that LPI updates follow a principle of maximum entropy production, moving parameters along paths that maximize information gain subject to constraints.
+This connection suggests that Fisher Flow updates follow a principle of maximum entropy production, moving parameters along paths that maximize information gain subject to constraints.
 
 \subsection{Relationship to Existing Methods}
 
-LPI provides theoretical foundations for several popular algorithms:
+Fisher Flow provides theoretical foundations for several popular algorithms:
 
 \begin{itemize}
-\item \textbf{Adam = Diagonal LPI:} Adam's second moment estimate approximates diagonal Fisher information
-\item \textbf{K-FAC = Kronecker LPI:} Kronecker-factored approximate curvature implements structured LPI
-\item \textbf{EWC = LPI regularization:} Elastic weight consolidation uses Fisher information as importance weights
-\item \textbf{Natural gradient = Exact LPI:} With full Fisher information matrix
+\item \textbf{Adam = Diagonal FF:} Adam's second moment estimate approximates diagonal Fisher information
+\item \textbf{K-FAC = Kronecker FF:} Kronecker-factored approximate curvature implements structured Fisher Flow
+\item \textbf{EWC = FF regularization:} Elastic weight consolidation uses Fisher information as importance weights
+\item \textbf{Natural gradient = Exact FF:} With full Fisher information matrix
 \end{itemize}
 
-This unification suggests that practitioners are already using LPI approximations, often without recognizing the underlying information-geometric principles.
+This unification suggests that practitioners are already using Fisher Flow approximations, often without recognizing the underlying information-geometric principles.
 
 \subsection{Connections to Optimal Control}
 
-LPI can be viewed through the lens of stochastic optimal control:
+Fisher Flow can be viewed through the lens of stochastic optimal control:
 
-\begin{theorem}[LPI as Bellman Equation]
+\begin{theorem}[Fisher Flow as Bellman Equation]
 The value function $V(\theta, t) = -\log p(\theta|x_{1:t})$ satisfies a Hamilton-Jacobi-Bellman equation:
 \begin{equation}
 \frac{\partial V}{\partial t} + \min_u \left\{\nabla V \cdot f(\theta, u) + \frac{1}{2}\text{Tr}(\sigma\sigma^\top \nabla^2 V)\right\} = 0
@@ -639,13 +639,13 @@ The value function $V(\theta, t) = -\log p(\theta|x_{1:t})$ satisfies a Hamilton
 where the optimal control $u^*$ recovers the natural gradient direction.
 \end{theorem}
 
-This perspective connects LPI to reinforcement learning and provides tools for analyzing convergence through Lyapunov theory.
+This perspective connects Fisher Flow to reinforcement learning and provides tools for analyzing convergence through Lyapunov theory.
 
 \subsection{Computational Complexity Analysis}
 
 \begin{table}[h]
 \centering
-\caption{Computational Complexity of LPI Variants}
+\caption{Computational Complexity of Fisher Flow Variants}
 \begin{tabular}{lcc}
 \toprule
 \textbf{Operation} & \textbf{Time Complexity} & \textbf{Space Complexity} \\
@@ -662,13 +662,13 @@ Low-rank (rank r) & $\mathcal{O}(ndr)$ & $\mathcal{O}(dr)$ \\
 \end{tabular}
 \end{table}
 
-For neural networks with $L$ layers and width $w$, full FIM requires $\mathcal{O}(L^2w^4)$ operations while Kronecker-factored LPI requires only $\mathcal{O}(Lw^3)$.
+For neural networks with $L$ layers and width $w$, full FIM requires $\mathcal{O}(L^2w^4)$ operations while Kronecker-factored Fisher Flow requires only $\mathcal{O}(Lw^3)$.
 
 \section{Information-Geometric Foundations}
 
 \subsection{The Statistical Manifold as a Riemannian Space}
 
-The foundation of LPI rests on viewing parametric families as Riemannian manifolds equipped with the Fisher-Rao metric. This geometric perspective reveals deep mathematical structure:
+The foundation of Fisher Flow rests on viewing parametric families as Riemannian manifolds equipped with the Fisher-Rao metric. This geometric perspective reveals deep mathematical structure:
 
 \begin{theorem}[Uniqueness of the Fisher-Rao Metric]
 \label{thm:fisher_rao_unique}
@@ -685,7 +685,7 @@ The invariance requirement demands that the metric computed from $p(x|\theta)$ e
 
 \subsection{Dual Connections and Information Geometry}
 
-The statistical manifold admits a dual geometric structure that enriches LPI:
+The statistical manifold admits a dual geometric structure that enriches Fisher Flow:
 
 \begin{definition}[$\alpha$-Connections]
 For $\alpha \in \mathbb{R}$, the $\alpha$-connection $\nabla^{(\alpha)}$ is defined by:
@@ -723,13 +723,13 @@ By the chain rule for Fisher information:
 Since $\mathcal{I}_{X|Y}(\theta) \succeq 0$, the inequality follows. Equality holds when $\mathcal{I}_{X|Y}(\theta) = 0$, which occurs precisely when $Y$ is sufficient.
 \end{proof}
 
-This theorem justifies LPI's focus on accumulating all available information: any summarization or preprocessing can only decrease the information available for inference.
+This theorem justifies Fisher Flow's focus on accumulating all available information: any summarization or preprocessing can only decrease the information available for inference.
 
-\subsection{Variational Characterization of LPI}
+\subsection{Variational Characterization of Fisher Flow}
 
-\begin{theorem}[LPI as Proximal Optimization]
+\begin{theorem}[Fisher Flow as Proximal Optimization]
 \label{thm:proximal}
-The LPI update can be expressed as the solution to a proximal optimization problem:
+The Fisher Flow update can be expressed as the solution to a proximal optimization problem:
 \begin{equation}
 \hat{\theta}_{t+1} = \arg\min_{\theta} \left\{-\ell_{B_t}(\theta) + \frac{1}{2}(\theta - \hat{\theta}_t)^\top \mathcal{I}_t (\theta - \hat{\theta}_t)\right\}
 \end{equation}
@@ -745,24 +745,24 @@ Linearizing the score around $\hat{\theta}_t$:
 \begin{equation}
 s_{B_t}(\hat{\theta}_{t+1}) \approx s_{B_t}(\hat{\theta}_t) + \mathcal{I}_{B_t}(\hat{\theta}_{t+1} - \hat{\theta}_t)
 \end{equation}
-Substituting and solving recovers the LPI update equation.
+Substituting and solving recovers the Fisher Flow update equation.
 \end{proof}
 
-This variational perspective connects LPI to mirror descent \cite{nemirovski1983problem} and reveals its implicit regularization structure.
+This variational perspective connects Fisher Flow to mirror descent \cite{nemirovski1983problem} and reveals its implicit regularization structure.
 
 \subsection{Optimal Transport and Wasserstein Geometry}
 
-LPI admits an elegant interpretation through optimal transport theory:
+Fisher Flow admits an elegant interpretation through optimal transport theory:
 
-\begin{theorem}[LPI as Wasserstein Gradient Flow]
-The continuous-time LPI dynamics minimize the Wasserstein distance between the empirical distribution and the model family:
+\begin{theorem}[Fisher Flow as Wasserstein Gradient Flow]
+The continuous-time Fisher Flow dynamics minimize the Wasserstein distance between the empirical distribution and the model family:
 \begin{equation}
 \frac{d\theta}{dt} = -\nabla_{W_2} D_{KL}(\hat{p}_n \| p_\theta)
 \end{equation}
 where $\nabla_{W_2}$ denotes the Wasserstein gradient.
 \end{theorem}
 
-This perspective unifies LPI with recent developments in gradient flows on probability spaces \cite{ambrosio2008gradient} and provides a bridge to modern computational optimal transport.
+This perspective unifies Fisher Flow with recent developments in gradient flows on probability spaces \cite{ambrosio2008gradient} and provides a bridge to modern computational optimal transport.
 
 \subsection{Practical Implementation Guidelines}
 
@@ -797,12 +797,12 @@ The choice of Fisher information approximation depends on model structure and co
 
 \section{Algorithmic Realization}
 
-\subsection{Abstract LPI Algorithm}
+\subsection{Abstract Fisher Flow Algorithm}
 
-We present LPI at multiple levels of abstraction, from the theoretical ideal to practical implementations:
+We present Fisher Flow at multiple levels of abstraction, from the theoretical ideal to practical implementations:
 
 \begin{algorithm}[h]
-\caption{Abstract LPI: Geometric Flow on Statistical Manifold}
+\caption{Abstract Fisher Flow: Geometric Flow on Statistical Manifold}
 \label{alg:abstract_lpi}
 \begin{algorithmic}[1]
 \State \textbf{Given:} Statistical manifold $(\mathcal{M}, g)$, data stream $\{x_t\}$
@@ -818,7 +818,7 @@ We present LPI at multiple levels of abstraction, from the theoretical ideal to 
 \subsection{Practical Implementation with Approximations}
 
 \begin{algorithm}[h]
-\caption{Practical LPI with Adaptive Structure}
+\caption{Practical Fisher Flow with Adaptive Structure}
 \label{alg:practical_lpi}
 \begin{algorithmic}[1]
 \Require Structure selector $\mathcal{S}$, approximation level $k$
@@ -847,7 +847,7 @@ The \texttt{Solve} function efficiently computes $\mathcal{I}_t^{-1}s_t$ based o
 
 \section{Approximation Theory and Computational Relaxations}
 
-While the exact LPI theory provides elegant mathematical guarantees, practical implementation often requires approximations. We now rigorously characterize these relaxations and their impact.
+While the exact Fisher Flow theory provides elegant mathematical guarantees, practical implementation often requires approximations. We now rigorously characterize these relaxations and their impact.
 
 \subsection{Structured Approximations of Fisher Information}
 
@@ -905,7 +905,7 @@ This concentration bound justifies mini-batch approximations and provides guidan
 
 \subsection{Connection to Modern Optimization Methods}
 
-LPI provides theoretical foundations for widely-used optimization algorithms:
+Fisher Flow provides theoretical foundations for widely-used optimization algorithms:
 
 \begin{theorem}[Adam as Approximate Natural Gradient]
 \label{thm:adam_natural}
@@ -923,14 +923,14 @@ The diagonal elements of the empirical Fisher information are $\mathcal{I}_{ii} 
 \end{proof}
 
 \begin{theorem}[Elastic Weight Consolidation as Information Regularization]
-EWC \cite{kirkpatrick2017overcoming} implements LPI with task-specific information accumulation:
+EWC \cite{kirkpatrick2017overcoming} implements Fisher Flow with task-specific information accumulation:
 \begin{equation}
 \mathcal{L}_{\text{EWC}}(\theta) = \mathcal{L}_{\text{new}}(\theta) + \frac{\lambda}{2}(\theta - \theta^*)^\top \mathcal{I}_{\text{old}} (\theta - \theta^*)
 \end{equation}
 where $\mathcal{I}_{\text{old}}$ is the Fisher information from previous tasks.
 \end{theorem}
 
-These connections demonstrate that LPI is not merely theoretical but underlies successful practical methods.
+These connections demonstrate that Fisher Flow is not merely theoretical but underlies successful practical methods.
 
 \subsection{Foundation Models and Scaling Laws}
 
@@ -953,17 +953,17 @@ There exists a critical information level $\mathcal{I}_c$ such that:
 
 This theoretical framework helps explain the sudden emergence of capabilities in large language models as they cross information thresholds.
 
-\subsection{LPI and Foundation Models}
+\subsection{Fisher Flow and Foundation Models}
 Large Language Models (e.g., GPT \cite{radford2018improving}, BERT \cite{devlin2018bert}) and other foundation models represent perhaps the most ambitious application of likelihood-based estimation to date. Despite their scale and complexity, these systems remain fundamentally likelihood-driven.
 
 In the context of such high-dimensional models, the traditional inferential goal of interpreting individual parameters becomes less relevant. Instead, the primary focus shifts to understanding and quantifying the uncertainty in the model's \textit{predictions}---such as the distribution over the next token in LLMs. The parameter uncertainty captured by the FIM (and its approximations) serves as a crucial intermediate step to derive these predictive uncertainties. For example, by sampling parameters $\theta^{(s)}$ from their approximate distribution $\mathcal{N}(\hat{\theta}, \hat{\mathcal{I}}^{-1})$, one can generate an ensemble of output distributions, enabling the construction of confidence intervals for top-k predictions or other hypothesis testing procedures related to model outputs.
 
 \subsubsection{Deriving and Utilizing Predictive Uncertainty in LLM Outputs}
 
-The LPI framework's ability to quantify parameter uncertainty via $\hat{\theta}$ and $\hat{\mathcal{I}}^{-1}$ offers a direct pathway to richer predictive uncertainty for LLM outputs, particularly for the next-token distribution. This goes beyond simple point predictions and can inform more nuanced generation strategies.
+The Fisher Flow framework's ability to quantify parameter uncertainty via $\hat{\theta}$ and $\hat{\mathcal{I}}^{-1}$ offers a direct pathway to richer predictive uncertainty for LLM outputs, particularly for the next-token distribution. This goes beyond simple point predictions and can inform more nuanced generation strategies.
 
 \paragraph{Constructing Confidence Intervals for Next-Token Probabilities:}
-Given the LPI-derived parameter estimate $\hat{\theta}$ and its approximate covariance $\hat{\mathcal{I}}^{-1}$, we can characterize the uncertainty in the predicted next-token probabilities as follows:
+Given the FF-derived parameter estimate $\hat{\theta}$ and its approximate covariance $\hat{\mathcal{I}}^{-1}$, we can characterize the uncertainty in the predicted next-token probabilities as follows:
 \begin{enumerate}
     \item \textbf{Parameter Sampling:} Draw $S$ samples of the parameter vector, $\theta^{(s)} \sim \mathcal{N}(\hat{\theta}, \hat{\mathcal{I}}^{-1})$, for $s=1, \ldots, S$. This step leverages the asymptotic normality of the MLE, where $\hat{\mathcal{I}}^{-1}$ is the estimated variance.
     \item \textbf{Ensemble of Predictive Distributions:} For a given input context, and for each sampled parameter vector $\theta^{(s)}$, compute the full probability distribution over the vocabulary $V$ for the next token: $P^{(s)} = \{p(v_j | \text{context}, \theta^{(s)}) \text{ for all } v_j \in V\}$. This results in an ensemble of $S$ predictive distributions.
@@ -975,7 +975,7 @@ This procedure yields not just a point probability for each potential next token
 \paragraph{Leveraging Predictive CIs in LLM Decoding Strategies:}
 These token-specific CIs can directly inform and enhance common LLM decoding strategies:
 \begin{itemize}
-    \item \textbf{Uncertainty-Aware Top-k/Top-p Sampling:} Standard top-k or top-p (nucleus) sampling \cite{holtzman2019curious} typically relies on point estimates of token probabilities. LPI-derived CIs allow for more sophisticated selection:
+    \item \textbf{Uncertainty-Aware Top-k/Top-p Sampling:} Standard top-k or top-p (nucleus) sampling \cite{holtzman2019curious} typically relies on point estimates of token probabilities. FF-derived CIs allow for more sophisticated selection:
     \begin{itemize}
         \item \textit{Robust Selection:} The sampling pool could be restricted to tokens whose \textit{lower confidence bound} $L_j$ exceeds a certain threshold, or tokens could be ranked by $L_j$. This prioritizes tokens that are reliably probable, potentially reducing the chance of nonsensical or low-quality continuations.
         \item \textit{Exploratory Selection:} Conversely, tokens could be considered if their \textit{upper confidence bound} $U_j$ is high, even if their mean probability $p(v_j | \text{context}, \hat{\theta})$ is not in the initial top set. This encourages exploration of tokens the model is uncertain about but considers plausible under some parameter configurations, potentially leading to more diverse or creative outputs.
@@ -983,23 +983,23 @@ These token-specific CIs can directly inform and enhance common LLM decoding str
     \end{itemize}
     \item \textbf{Quantifying Output Reliability:} The width of the CIs ($U_j - L_j$) for chosen tokens can serve as a direct measure of the model's confidence in its own output probabilities, useful for downstream tasks or for signaling when human review might be necessary.
 \end{itemize}
-By incorporating these LPI-derived predictive uncertainty measures, LLM generation can move beyond simple likelihood maximization towards more controllable, robust, or diverse text generation, directly reflecting the information (and its limitations) captured by the model parameters.
+By incorporating these FF-derived predictive uncertainty measures, LLM generation can move beyond simple likelihood maximization towards more controllable, robust, or diverse text generation, directly reflecting the information (and its limitations) captured by the model parameters.
 
-Key aspects of LPI are particularly salient for these models:
+Key aspects of Fisher Flow are particularly salient for these models:
 \begin{itemize}
-\item Training objectives are variations of log-likelihood maximization, directly connecting to LPI's first primitive.
+\item Training objectives are variations of log-likelihood maximization, directly connecting to Fisher Flow's first primitive.
 \item Parameter estimation uncertainty (via the FIM), even if not used for direct inference on individual parameters, provides valuable signals. These include guiding active learning \cite{settles2009active} and exploration, informing principled early stopping criteria based on information gain (e.g., when $\log\det(\mathcal{I})$ plateaus), or refining learning rate schedules.
-\item Information additivity enables principled distributed training and continual learning \cite{kirkpatrick2017overcoming, parisi2019continual}. Similarly, LPI provides a robust framework for fine-tuning pre-trained foundation models. In this scenario, the parameters of the pre-trained model ($\hat{\theta}_{\text{pre}}$) and its associated Fisher Information matrix ($\mathcal{I}_{\text{pre}}$, possibly approximated) serve as a powerful, data-derived pseudo-prior. Initializing the LPI updates with $(\hat{\theta}_{\text{pre}}, \mathcal{I}_{\text{pre}})$ means that new parameters are learned by balancing the likelihood from the fine-tuning data against a quadratic penalty for deviating from $\hat{\theta}_{\text{pre}}$. This penalty, $\frac{1}{2} (\theta - \hat{\theta}_{\text{pre}})^T \mathcal{I}_{\text{pre}} (\theta - \hat{\theta}_{\text{pre}})$, effectively acts as a soft constraint. Such an approach is closely related to minimizing a divergence (e.g., a second-order approximation to the KL divergence between a Gaussian centered at $\theta$ and one at $\hat{\theta}_{\text{pre}}$ with precision $\mathcal{I}_{\text{pre}}$) from the "distribution" embodied by the pre-trained model. This allows for the preservation of general "common sense" knowledge captured during pre-training while adapting the model to new, task-specific data using $\mathcal{I}_{\text{fine-tune}}$.
-\item Regularization techniques map naturally to LPI extensions described in Section 6.
+\item Information additivity enables principled distributed training and continual learning \cite{kirkpatrick2017overcoming, parisi2019continual}. Similarly, Fisher Flow provides a robust framework for fine-tuning pre-trained foundation models. In this scenario, the parameters of the pre-trained model ($\hat{\theta}_{\text{pre}}$) and its associated Fisher Information matrix ($\mathcal{I}_{\text{pre}}$, possibly approximated) serve as a powerful, data-derived pseudo-prior. Initializing the Fisher Flow updates with $(\hat{\theta}_{\text{pre}}, \mathcal{I}_{\text{pre}})$ means that new parameters are learned by balancing the likelihood from the fine-tuning data against a quadratic penalty for deviating from $\hat{\theta}_{\text{pre}}$. This penalty, $\frac{1}{2} (\theta - \hat{\theta}_{\text{pre}})^T \mathcal{I}_{\text{pre}} (\theta - \hat{\theta}_{\text{pre}})$, effectively acts as a soft constraint. Such an approach is closely related to minimizing a divergence (e.g., a second-order approximation to the KL divergence between a Gaussian centered at $\theta$ and one at $\hat{\theta}_{\text{pre}}$ with precision $\mathcal{I}_{\text{pre}}$) from the "distribution" embodied by the pre-trained model. This allows for the preservation of general "common sense" knowledge captured during pre-training while adapting the model to new, task-specific data using $\mathcal{I}_{\text{fine-tune}}$.
+\item Regularization techniques map naturally to Fisher Flow extensions described in Section 6.
 \end{itemize}
 
-The success of these systems demonstrates that even as models become increasingly complex, the core principles of LPI---maximum likelihood estimation guided by information geometry---remain foundational. Indeed, many challenges in modern AI (catastrophic forgetting, efficient fine-tuning, uncertainty calibration \cite{guo2017calibration}) can be reframed and potentially addressed through the lens of information propagation.
+The success of these systems demonstrates that even as models become increasingly complex, the core principles of FF---maximum likelihood estimation guided by information geometry---remain foundational. Indeed, many challenges in modern AI (catastrophic forgetting, efficient fine-tuning, uncertainty calibration \cite{guo2017calibration}) can be reframed and potentially addressed through the lens of information propagation.
 
 \section{Empirical Validation}
 
 \subsection{Experimental Setup}
 
-We evaluate LPI against standard baselines on three tasks:
+We evaluate Fisher Flow against standard baselines on three tasks:
 \begin{enumerate}
 \item \textbf{Online logistic regression:} Sequential classification with uncertainty
 \item \textbf{Neural network training:} MNIST with uncertainty quantification  
@@ -1019,8 +1019,8 @@ We evaluate LPI against standard baselines on three tasks:
 \midrule
 SGD & 0.754 ± 0.003 & 0.521 & 0.082 & 1.2 \\
 Adam & 0.761 ± 0.002 & 0.498 & 0.071 & 1.8 \\
-LPI (diagonal) & 0.763 ± 0.002 & 0.485 & 0.048 & 2.1 \\
-LPI (block) & \textbf{0.768 ± 0.002} & \textbf{0.479} & \textbf{0.041} & 4.5 \\
+FF (diagonal) & 0.763 ± 0.002 & 0.485 & 0.048 & 2.1 \\
+FF (block) & \textbf{0.768 ± 0.002} & \textbf{0.479} & \textbf{0.041} & 4.5 \\
 Variational Bayes & 0.765 ± 0.003 & 0.482 & 0.045 & 45.3 \\
 \midrule
 \multicolumn{5}{c}{\textit{Neural Network (MNIST, 2-layer MLP)}} \\
@@ -1028,7 +1028,7 @@ Variational Bayes & 0.765 ± 0.003 & 0.482 & 0.045 & 45.3 \\
 SGD & 0.976 & 0.089 & 0.015 & 12.4 \\
 Adam & 0.981 & 0.071 & 0.012 & 14.1 \\
 Natural Gradient & 0.983 & 0.063 & 0.009 & 89.2 \\
-LPI (Kronecker) & \textbf{0.984} & \textbf{0.058} & \textbf{0.007} & 31.5 \\
+FF (Kronecker) & \textbf{0.984} & \textbf{0.058} & \textbf{0.007} & 31.5 \\
 MC Dropout & 0.982 & 0.065 & 0.011 & 156.8 \\
 \bottomrule
 \end{tabular}
@@ -1036,36 +1036,36 @@ MC Dropout & 0.982 & 0.065 & 0.011 & 156.8 \\
 
 \textbf{Key findings:}
 \begin{itemize}
-\item LPI consistently achieves better calibration (lower ECE) than baseline optimizers
-\item Kronecker-factored LPI provides 3x speedup over full natural gradient
-\item Block-diagonal LPI offers best accuracy/efficiency trade-off
-\item Uncertainty estimates from LPI closely match expensive Bayesian methods
+\item Fisher Flow consistently achieves better calibration (lower ECE) than baseline optimizers
+\item Kronecker-factored Fisher Flow provides 3x speedup over full natural gradient
+\item Block-diagonal Fisher Flow offers best accuracy/efficiency trade-off
+\item Uncertainty estimates from Fisher Flow closely match expensive Bayesian methods
 \end{itemize}
 
 \section{Illustrative Example: Deep Learning Model Training}
-Consider training a deep neural network (DNN) for classification using a cross-entropy loss, which is equivalent to maximizing the log-likelihood of a categorical distribution. LPI provides a lens to understand and enhance this process:
+Consider training a deep neural network (DNN) for classification using a cross-entropy loss, which is equivalent to maximizing the log-likelihood of a categorical distribution. Fisher Flow provides a lens to understand and enhance this process:
 
 \begin{itemize}
-  \item \textbf{Stochastic Updates as LPI Steps}: Training with mini-batches can be viewed as a sequence of LPI updates. For each mini-batch $B_t$:
+  \item \textbf{Stochastic Updates as Fisher Flow Steps}: Training with mini-batches can be viewed as a sequence of Fisher Flow updates. For each mini-batch $B_t$:
   \begin{enumerate}
     \item The gradient of the loss $\nabla_\theta \mathcal{L}_{B_t}$ is the negative score $-s_{B_t}(\theta)$.
     \item The (approximate) Fisher Information Matrix $\mathcal{I}_{B_t}$ can be estimated (e.g., using empirical FIM, diagonal approximations like in Adam/RMSProp, or Kronecker-factored approximations).
-    \item An optimizer step, especially one like natural gradient descent, takes the form $\theta_{t} \leftarrow \theta_{t-1} - \eta \mathcal{I}_{B_t}^{-1} s_{B_t}(\theta_{t-1})$, directly analogous to the LPI update, or more generally, $\theta_t \leftarrow \mathcal{I}_t^{-1}(\mathcal{I}_{t-1}\theta_{t-1} + \mathcal{I}_{B_t}\hat\theta_{B_t})$ if we consider $\hat\theta_{B_t}$ as the conceptual MLE for that batch.
+    \item An optimizer step, especially one like natural gradient descent, takes the form $\theta_{t} \leftarrow \theta_{t-1} - \eta \mathcal{I}_{B_t}^{-1} s_{B_t}(\theta_{t-1})$, directly analogous to the Fisher Flow update, or more generally, $\theta_t \leftarrow \mathcal{I}_t^{-1}(\mathcal{I}_{t-1}\theta_{t-1} + \mathcal{I}_{B_t}\hat\theta_{B_t})$ if we consider $\hat\theta_{B_t}$ as the conceptual MLE for that batch.
   \end{enumerate}
-  \item \textbf{Information Accumulation and Regularization}: The total information $\mathcal{I}_t = \sum_k \mathcal{I}_{B_k}$ (or a running average) reflects the model's accumulated knowledge. Techniques like Elastic Weight Consolidation (EWC) \cite{kirkpatrick2017overcoming} for continual learning explicitly use the FIM to penalize changes to parameters important for previous tasks, which is a direct application of LPI's information-weighting principle.
+  \item \textbf{Information Accumulation and Regularization}: The total information $\mathcal{I}_t = \sum_k \mathcal{I}_{B_k}$ (or a running average) reflects the model's accumulated knowledge. Techniques like Elastic Weight Consolidation (EWC) \cite{kirkpatrick2017overcoming} for continual learning explicitly use the FIM to penalize changes to parameters important for previous tasks, which is a direct application of Fisher Flow's information-weighting principle.
   \item \textbf{Uncertainty and Model Analysis}: Approximations to the FIM provide insights into parameter uncertainty, which, while not typically used for interpreting individual parameters in large DNNs, are instrumental for deriving \textit{predictive uncertainty} for model outputs (e.g., class probabilities or next-token distributions). The inverse FIM, $\mathcal{I}_t^{-1}$, offers a principled (though approximate) covariance matrix for $\hat{\theta}_t$, forming the basis for sampling parameters to estimate the variability of predictions. Furthermore, FIM-derived metrics can identify parameter sensitivities, guide pruning or quantization, and inform training dynamics like early stopping based on information saturation.
 \end{itemize}
-While full FIM computation is often intractable for large DNNs, the LPI framework motivates and provides theoretical grounding for many successful heuristics and approximations used in modern deep learning, framing them as attempts to efficiently propagate likelihood-derived information.
+While full FIM computation is often intractable for large DNNs, the Fisher Flow framework motivates and provides theoretical grounding for many successful heuristics and approximations used in modern deep learning, framing them as attempts to efficiently propagate likelihood-derived information.
 
 \section{Unified Theoretical Perspective}
 
-\subsection{LPI as a Natural Geometric Flow}
+\subsection{Fisher Flow as a Natural Geometric Flow}
 
-We can now present a unified view of LPI that connects its various mathematical aspects:
+We can now present a unified view of Fisher Flow that connects its various mathematical aspects:
 
-\begin{theorem}[Master Equation of LPI]
+\begin{theorem}[Master Equation of Fisher Flow]
 \label{thm:master}
-The LPI dynamics can be expressed equivalently as:
+The Fisher Flow dynamics can be expressed equivalently as:
 \begin{align}
 \text{(Geometric):} \quad & \frac{d\theta}{dt} = -\tilde{\nabla} \ell(\theta) \\
 \text{(Variational):} \quad & \theta_{t+\delta t} = \arg\min_\theta \left\{D_{KL}(p_\theta \| p_{\theta_t}) - \delta t \cdot \ell(\theta)\right\} \\
@@ -1074,18 +1074,18 @@ The LPI dynamics can be expressed equivalently as:
 where all three formulations yield identical parameter trajectories.
 \end{theorem}
 
-This unification reveals LPI as a fundamental geometric principle rather than an ad-hoc algorithm.
+This unification reveals Fisher Flow as a fundamental geometric principle rather than an ad-hoc algorithm.
 
 \subsection{Hierarchy of Approximations}
 
-Practical implementations form a hierarchy of approximations to the ideal LPI flow:
+Practical implementations form a hierarchy of approximations to the ideal Fisher Flow flow:
 
 \begin{center}
 \begin{tabular}{lcc}
 \toprule
 \textbf{Approximation Level} & \textbf{Information Structure} & \textbf{Computational Cost} \\
 \midrule
-Exact LPI & Full $\mathcal{I} \in \mathbb{R}^{d \times d}$ & $\mathcal{O}(d^3)$ \\
+Exact Fisher Flow & Full $\mathcal{I} \in \mathbb{R}^{d \times d}$ & $\mathcal{O}(d^3)$ \\
 Block-diagonal & $\mathcal{I} = \bigoplus_k \mathcal{I}_k$ & $\mathcal{O}(\sum_k d_k^3)$ \\
 Kronecker-factored & $\mathcal{I} \approx A \otimes B$ & $\mathcal{O}(m^3 + n^3)$ \\
 Diagonal (Adam-like) & $\mathcal{I} = \text{diag}(v)$ & $\mathcal{O}(d)$ \\
@@ -1100,7 +1100,7 @@ Each level preserves different aspects of the geometric structure while trading 
 
 \subsection{Beyond Parameters: What Else Can We Propagate?}
 
-The LPI principle—propagating summary statistics rather than full distributions—suggests broader generalizations:
+The Fisher Flow principle—propagating summary statistics rather than full distributions—suggests broader generalizations:
 
 \subsubsection{Moment Propagation Inference (MPI)}
 Instead of just mean and covariance (first two moments), propagate higher moments:
@@ -1128,7 +1128,7 @@ Propagate model evidence for hypothesis testing:
 
 \subsection{The Meta-Pattern: Sufficient Statistics Propagation}
 
-LPI is actually an instance of a more general pattern:
+Fisher Flow is actually an instance of a more general pattern:
 
 \begin{center}
 \fbox{\parbox{0.8\textwidth}{
@@ -1146,7 +1146,7 @@ This suggests a research program:
 
 \subsection{Unexplored Territories}
 
-\subsubsection{LPI for Causal Inference}
+\subsubsection{Fisher Flow for Causal Inference}
 Can we propagate causal information?
 \begin{itemize}
 \item Interventional distributions as "causal information"
@@ -1154,7 +1154,7 @@ Can we propagate causal information?
 \item Online causal discovery through information geometry
 \end{itemize}
 
-\subsubsection{LPI for Reinforcement Learning}
+\subsubsection{Fisher Flow for Reinforcement Learning}
 Value functions and policies as information:
 \begin{itemize}
 \item Bellman updates as information propagation
@@ -1162,7 +1162,7 @@ Value functions and policies as information:
 \item Exploration as information seeking
 \end{itemize}
 
-\subsubsection{LPI for Scientific Discovery}
+\subsubsection{Fisher Flow for Scientific Discovery}
 Hypothesis testing through information accumulation:
 \begin{itemize}
 \item Experimental design as information maximization
@@ -1172,7 +1172,7 @@ Hypothesis testing through information accumulation:
 
 \subsection{The Philosophical Question: Is All Learning Information Propagation?}
 
-LPI suggests a profound possibility: perhaps all forms of learning can be understood as information propagation with different:
+Fisher Flow suggests a profound possibility: perhaps all forms of learning can be understood as information propagation with different:
 \begin{itemize}
 \item \textbf{Carriers:} What holds the information? (parameters, functions, graphs, programs)
 \item \textbf{Metrics:} How do we measure information? (Fisher, Shannon, Kolmogorov)
@@ -1190,7 +1190,7 @@ This perspective could unify:
 
 \subsection{A Call to Action}
 
-The LPI framework is not just a technical contribution—it's an invitation to rethink learning through the lens of information propagation. By naming this pattern, we open doors to:
+The Fisher Flow framework is not just a technical contribution—it's an invitation to rethink learning through the lens of information propagation. By naming this pattern, we open doors to:
 
 \begin{enumerate}
 \item \textbf{New algorithms:} Design methods by choosing what information to propagate
@@ -1199,15 +1199,15 @@ The LPI framework is not just a technical contribution—it's an invitation to r
 \item \textbf{Cross-fertilization:} Connect disparate fields through shared information principles
 \end{enumerate}
 
-The question is not whether LPI is ``correct''—it's whether thinking about learning as information propagation leads to better algorithms, deeper insights, and new discoveries. Early evidence suggests it does.
+The question is not whether Fisher Flow is ``correct''—it's whether thinking about learning as information propagation leads to better algorithms, deeper insights, and new discoveries. Early evidence suggests it does.
 
 \section{Conclusion: The Power of Naming}
 
 This paper did three things:
 
-\textbf{1. We named a pattern.} Likelihood-Propagation Inference (LPI) isn't entirely new—people have been doing versions of it for decades. But by recognizing it as a unified principle and giving it a name, we can now see connections that were hidden before. Adam isn't just an optimizer; it's diagonal LPI. Natural gradient isn't just a fancy algorithm; it's exact LPI. The Kalman filter isn't just for control theory; it's LPI for linear systems.
+\textbf{1. We named a pattern.} Fisher Flow isn't entirely new—people have been doing versions of it for decades. But by recognizing it as a unified principle and giving it a name, we can now see connections that were hidden before. Adam isn't just an optimizer; it's diagonal Fisher Flow. Natural gradient isn't just a fancy algorithm; it's exact Fisher Flow. The Kalman filter isn't just for control theory; it's Fisher Flow for linear systems.
 
-\textbf{2. We formalized the mathematics.} By grounding LPI in information geometry, we showed it's not ad-hoc but emerges from fundamental principles. The Fisher Information Matrix isn't just a computational tool—it's the natural currency for propagating statistical knowledge. This mathematical foundation provides:
+\textbf{2. We formalized the mathematics.} By grounding Fisher Flow in information geometry, we showed it's not ad-hoc but emerges from fundamental principles. The Fisher Information Matrix isn't just a computational tool—it's the natural currency for propagating statistical knowledge. This mathematical foundation provides:
 \begin{itemize}
 \item Convergence guarantees (when will it work?)
 \item Approximation bounds (how much do we lose with simplifications?)
@@ -1223,7 +1223,7 @@ This paper did three things:
 
 \subsection{The Bigger Picture}
 
-LPI represents a shift in how we think about learning:
+Fisher Flow represents a shift in how we think about learning:
 
 \begin{center}
 \begin{tabular}{ll}
@@ -1246,18 +1246,18 @@ This isn't just philosophical—it's practical. When you realize you're propagat
 
 \subsection{What We Hope Happens Next}
 
-Good frameworks are generative—they lead to new ideas. We hope LPI inspires:
+Good frameworks are generative—they lead to new ideas. We hope Fisher Flow inspires:
 
 \begin{enumerate}
 \item \textbf{New algorithms:} What if we propagate different statistics? Different geometries? Different objectives?
-\item \textbf{Better understanding:} Which successful methods are secretly LPI? What does that tell us?
-\item \textbf{Practical tools:} Can we build automatic LPI compilers that choose approximations based on computational budgets?
+\item \textbf{Better understanding:} Which successful methods are secretly Fisher Flow? What does that tell us?
+\item \textbf{Practical tools:} Can we build automatic Fisher Flow compilers that choose approximations based on computational budgets?
 \item \textbf{Theoretical insights:} Is there a deeper principle underlying all learning as information propagation?
 \end{enumerate}
 
 \subsection{Final Thought}
 
-Sometimes the biggest contribution isn't inventing something new—it's recognizing what's already there and giving it a name. The periodic table didn't create new elements; it revealed the pattern underlying all elements. Similarly, LPI doesn't create new algorithms; it reveals the information-propagation pattern underlying many successful methods.
+Sometimes the biggest contribution isn't inventing something new—it's recognizing what's already there and giving it a name. The periodic table didn't create new elements; it revealed the pattern underlying all elements. Similarly, Fisher Flow doesn't create new algorithms; it reveals the information-propagation pattern underlying many successful methods.
 
 By naming this pattern, we make it visible, teachable, and extendable. That's the real contribution: not just another algorithm, but a new way of thinking about an old problem. And sometimes, that's exactly what a field needs to move forward.
 

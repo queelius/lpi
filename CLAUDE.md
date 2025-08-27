@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is an academic LaTeX paper repository for "Likelihood-Propagation Inference (LPI)" - a research paper on machine learning and statistical inference methods.
+This is an academic paper and implementation repository for "Fisher Flow" - a unified framework for information-geometric sequential inference that shows many optimization methods (Adam, Natural Gradient, EWC) are special cases of propagating Fisher information.
 
 ## Project Structure
 
@@ -33,7 +33,7 @@ rm -f *.aux *.log *.bbl *.blg *.out *.toc *.synctex.gz
 
 ## Paper Architecture & Content
 
-The paper presents Likelihood-Propagation Inference (LPI), a framework that:
+The paper presents Fisher Flow (FF), a framework that:
 - Provides an alternative to Bayesian sequential updating using maximum likelihood estimation
 - Leverages the Fisher Information Matrix for uncertainty quantification
 - Connects to modern deep learning optimization methods (Adam, RMSProp, natural gradients)
