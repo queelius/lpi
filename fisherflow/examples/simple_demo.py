@@ -8,7 +8,7 @@ and uncertainty quantification in a streaming data setting.
 
 import numpy as np
 import matplotlib.pyplot as plt
-from fisher_flow import DiagonalFF, FullFF
+from fisherflow.optimizers import DiagonalFisherFlow, NaturalGradientFlow
 
 def generate_streaming_data(n_samples=1000, n_features=5, noise=0.1):
     """Generate synthetic regression data."""
@@ -24,8 +24,8 @@ def main():
     n_samples, n_features = X.shape
     
     # Initialize Fisher Flow estimators
-    diagonal_ff = DiagonalFF(n_features)
-    full_ff = FullFF(n_features)
+    diagonal_ff = DiagonalFisherFlow(n_features)
+    full_ff = NaturalGradientFlow(n_features)
     
     # Storage for tracking convergence
     diagonal_errors = []

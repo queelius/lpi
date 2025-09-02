@@ -11,6 +11,7 @@
 \newtheorem{axiom}[theorem]{Axiom}
 \newtheorem{remark}[theorem]{Remark}
 \newtheorem{example}[theorem]{Example}
+\newtheorem{conjecture}[theorem]{Conjecture}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{algorithm}
@@ -109,6 +110,19 @@ $\mathcal{I}_n$ & Accumulated information after $n$ observations \\
 
 We consistently use $\mathcal{I}$ for expected and $\hat{\mathcal{I}}$ for observed information.
 
+\subsubsection{Score and Information Notation}
+For clarity, we standardize the following notation.
+\begin{itemize}
+\item Per-observation score: $s_i(\theta) := \nabla_\theta \log p(x_i\mid \theta)$ for observation $i$
+\item Cumulative score after $n$ observations: $s_n(\theta) := \sum_{i=1}^n s_i(\theta)$
+\item Batch score for batch $B$ containing observations $\{i_1, \ldots, i_k\}$: $s_{B}(\theta) := \sum_{j\in B} s_j(\theta)$
+\item Expected Fisher information: $\mathcal I(\theta) := \mathbb E\big[s(\theta)s(\theta)^\top\big]$
+\item Observed Fisher information: $\hat{\mathcal I}(\theta) := -\nabla_\theta^2 \ell(\theta)$
+\item Sequential information accumulation after $n$ observations: $\mathcal I_n = \sum_{i=1}^n \hat{\mathcal I}_i$
+\item When processing in batches: After $t$ batches with $n_t = \sum_{k=1}^t |B_k|$ total observations, $\mathcal I_{n_t} = \sum_{k=1}^t \hat{\mathcal I}_{B_k}$
+\end{itemize}
+Unless stated otherwise, $\mathcal I$ denotes expected Fisher information and $\hat{\mathcal I}$ denotes observed (empirical) information evaluated at the parameter specified in context. Subscript $n$ always denotes the total number of observations seen, while subscript $t$ (when used) indexes batch iterations.
+
 \subsection{Statistical Manifolds and Information Geometry}
 
 \begin{definition}[Statistical Manifold]
@@ -117,7 +131,7 @@ A \textbf{statistical manifold} is a Riemannian manifold $(\mathcal{M}, g)$ wher
 \item $\mathcal{M} = \{p_\theta : \theta \in \Theta \subseteq \mathbb{R}^d\}$ is a parametric family
 \item $g$ is the Fisher-Rao metric tensor with components $g_{ij}(\theta) = \mathcal{I}_{ij}(\theta)$
 \end{itemize}
-\end{definition>
+\end{definition}
 
 \begin{definition}[Fisher Information Matrix]
 For a parametric family $\{p(x|\theta)\}_{\theta \in \Theta}$, the \textbf{Fisher Information Matrix} $\mathcal{I}(\theta)$ is defined as:
@@ -349,7 +363,7 @@ The natural gradient $\tilde{\nabla}$ is defined as the gradient with respect to
 \begin{equation}
 \tilde{\nabla}_\theta \ell = \mathcal{I}(\theta)^{-1} \nabla_\theta \ell = \mathcal{I}(\theta)^{-1} s(\theta)
 \end{equation}
-The flow follows geodesics in $\mathcal{M}$ when $\ell$ is the log-likelihood, minimizing the KL divergence between empirical and model distributions. The discrete update with learning rate $\eta_t$ provides a first-order approximation to this continuous flow.
+This defines a Riemannian (natural) gradient flow on $\mathcal{M}$ under the Fisher--Rao metric. The discrete update with learning rate $\eta_t$ provides a first-order approximation to this continuous flow.
 \end{proof}
 
 \subsection{Information Combination and Optimality}
@@ -386,17 +400,19 @@ Solving yields the stated formula. Optimality follows from the Gauss-Markov theo
 \caption{Fisher Flow Sequential Update}
 \label{alg:lpi_sequential}
 \begin{algorithmic}[1]
-\Require Initial state $(\hat{\theta}_0, \mathcal{I}_0)$, data stream $\{B_t\}_{t=1}^T$
-\Ensure Final estimate $(\hat{\theta}_T, \mathcal{I}_T)$
-\For{$t = 1$ to $T$}
-\State Observe batch $B_t = \{x_1^{(t)}, \ldots, x_{n_t}^{(t)}\}$
-\State Compute batch score: $s_{B_t}(\theta) = \sum_{i=1}^{n_t} \nabla_\theta \log p(x_i^{(t)}|\theta)$
-\State Compute batch information: $\mathcal{I}_{B_t}(\theta) = -\sum_{i=1}^{n_t} \nabla^2_\theta \log p(x_i^{(t)}|\theta)$
+\Require Initial state $(\hat{\theta}_0, \mathcal{I}_0)$, data stream in batches $\{B_t\}_{t=1}^T$
+\Ensure Final estimate $(\hat{\theta}_N, \mathcal{I}_N)$ after $N$ total observations
+\State Initialize: $n \gets 0$ \Comment{Total observations counter}
+\For{$t = 1$ to $T$} \Comment{Iterate over batches}
+\State Observe batch $B_t = \{x_{n+1}, \ldots, x_{n+|B_t|}\}$ with $|B_t|$ observations
+\State Compute batch score: $s_{B_t}(\theta) = \sum_{i \in B_t} \nabla_\theta \log p(x_i|\theta)$
+\State Compute batch information: $\hat{\mathcal{I}}_{B_t}(\theta) = \sum_{i \in B_t} -\nabla^2_\theta \log p(x_i|\theta)$
 \State Find batch MLE: $\hat{\theta}_{B_t} = \arg\max_\theta \ell_{B_t}(\theta)$
-\State Update information: $\mathcal{I}_t = \mathcal{I}_{t-1} + \mathcal{I}_{B_t}(\hat{\theta}_{B_t})$
-\State Update estimate: $\hat{\theta}_t = \mathcal{I}_t^{-1}(\mathcal{I}_{t-1}\hat{\theta}_{t-1} + \mathcal{I}_{B_t}\hat{\theta}_{B_t})$
+\State Update cumulative information: $\mathcal{I}_{n+|B_t|} = \mathcal{I}_n + \hat{\mathcal{I}}_{B_t}(\hat{\theta}_{B_t})$
+\State Update estimate: $\hat{\theta}_{n+|B_t|} = \mathcal{I}_{n+|B_t|}^{-1}\big(\mathcal{I}_n\hat{\theta}_n + \hat{\mathcal{I}}_{B_t}\hat{\theta}_{B_t}\big)$
+\State Update counter: $n \gets n + |B_t|$
 \EndFor
-\State \Return $(\hat{\theta}_T, \mathcal{I}_T)$
+\State \Return $(\hat{\theta}_N, \mathcal{I}_N)$ where $N = \sum_{t=1}^T |B_t|$
 \end{algorithmic}
 \end{algorithm}
 
@@ -423,19 +439,11 @@ For the Fisher Flow estimator $\hat{\theta}_n$ with accumulated information $\ma
 \begin{equation}
 \sqrt{n}(\hat{\theta}_n - \theta_0) \xrightarrow{d} \mathcal{N}(0, \mathcal{I}(\theta_0)^{-1})
 \end{equation}
-Furthermore, $\hat{\theta}_n$ achieves the Cramér-Rao lower bound asymptotically.
+Furthermore, if $\hat{\theta}_n$ coincides with the MLE (e.g., under exact information accumulation and suitable initialization), it achieves the Cramér--Rao lower bound asymptotically. More generally, if the FF estimator is a consistent, asymptotically linear one-step estimator with influence function $\mathcal I(\theta_0)^{-1}s(\theta_0)$, the same limit holds \cite{vanderVaart1998asymptotic}.
 \end{theorem}
 
-\begin{proof}
-Expanding the score around $\theta_0$:
-\begin{equation}
-s_n(\theta_0) = s_n(\hat{\theta}_n) + \mathcal{I}_n(\tilde{\theta})(\theta_0 - \hat{\theta}_n) = \mathcal{I}_n(\tilde{\theta})(\theta_0 - \hat{\theta}_n)
-\end{equation}
-where $\tilde{\theta}$ lies between $\theta_0$ and $\hat{\theta}_n$, and $s_n(\hat{\theta}_n) = 0$ by definition. By the central limit theorem:
-\begin{equation}
-\frac{1}{\sqrt{n}}s_n(\theta_0) \xrightarrow{d} \mathcal{N}(0, \mathcal{I}(\theta_0))
-\end{equation}
-Combining with $\mathcal{I}_n(\tilde{\theta})/n \xrightarrow{p} \mathcal{I}(\theta_0)$ yields the result. Efficiency follows from the information inequality.
+\begin{proof}[Proof Sketch]
+When FF coincides with the MLE, classical MLE asymptotics apply. Otherwise, under asymptotic linearity, write $\sqrt{n}(\hat{\theta}_n-\theta_0) = \mathcal I(\theta_0)^{-1}\,n^{-1/2}\sum_{i=1}^n s_i(\theta_0) + o_p(1)$ and invoke the CLT for the score along with $\mathcal I_n/n \to_p \mathcal I(\theta_0)$.
 \end{proof}
 
 \subsection{Non-Asymptotic Bounds}
@@ -448,6 +456,60 @@ Under sub-Gaussian score assumptions, with probability at least $1-\delta$:
 \end{equation}
 where $\|\cdot\|_{\mathcal{I}}$ denotes the Mahalanobis norm induced by $\mathcal{I}$.
 \end{theorem}
+
+\subsection{Fisher Flow Away from Optima: From Classical Statistics to Modern ML}
+
+The theoretical properties established above—consistency, asymptotic normality, and efficiency—all rest on a crucial assumption: that we converge to a local maximum of the likelihood (or equivalently, a local minimum of the loss). In classical statistics with moderate-dimensional problems, this assumption is reasonable and often satisfied. However, modern machine learning operates in a fundamentally different regime where:
+\begin{enumerate}
+\item \textbf{Convergence is rarely achieved}: Training typically stops due to computational budgets, time constraints, or intentional early stopping as a form of regularization.
+\item \textbf{Convergence may be undesirable}: Exact optima often correspond to overfitting, while slightly suboptimal parameters generalize better.
+\item \textbf{The optimization trajectory matters}: The path taken through parameter space encodes useful inductive biases.
+\end{enumerate}
+
+\subsubsection{Reinterpreting Fisher Flow for Non-Convergent Settings}
+
+When Fisher Flow operates away from local optima, the Fisher Information Matrix takes on a different character:
+
+\begin{definition}[Trajectory-Dependent Fisher Information]
+For a parameter trajectory $\{\theta_t\}_{t=0}^T$ that may not converge to an optimum, define the \textbf{accumulated trajectory information}:
+\begin{equation}
+\mathcal{I}_{\text{traj}} = \sum_{t=0}^T \hat{\mathcal{I}}(\theta_t)
+\end{equation}
+where $\hat{\mathcal{I}}(\theta_t)$ is the observed Fisher information at point $\theta_t$ along the trajectory.
+\end{definition}
+
+This accumulated information no longer represents uncertainty about a maximum likelihood estimate, but rather encodes the geometry of the path traversed through parameter space.
+
+\begin{proposition}[Path-Dependent Regularization]
+The Fisher Flow update away from optima implements a form of \textbf{path-dependent regularization}:
+\begin{equation}
+\theta_{t+1} = \arg\min_\theta \left\{ \ell(\theta) + \frac{1}{2}(\theta - \theta_t)^\top \mathcal{I}_{\text{traj}} (\theta - \theta_t) \right\}
+\end{equation}
+where $\mathcal{I}_{\text{traj}}$ acts as an adaptive regularizer that penalizes movement in directions where the model has accumulated significant curvature information.
+\end{proposition}
+
+\subsubsection{Implications for Modern Deep Learning}
+
+This reinterpretation explains several empirical phenomena in deep learning:
+
+\begin{enumerate}
+\item \textbf{Why Adam works}: Adam accumulates squared gradients $\mathbb{E}[g_t^2]$ along the entire trajectory, not at convergence. This creates a path-dependent preconditioner that adapts to the geometry encountered during optimization.
+
+\item \textbf{Why early stopping helps}: Stopping before convergence preserves uncertainty in unexplored directions of parameter space. The incomplete Fisher information $\mathcal{I}_{\text{traj}}$ maintains high uncertainty (low information) in these directions, providing implicit regularization.
+
+\item \textbf{Why flat minima generalize}: Regions with low Fisher information (flat minima) indicate parameters that are less sensitive to data perturbations \cite{hochreiter1997flat,keskar2017large}. The trajectory-based Fisher Flow naturally favors such regions by accumulating less information there.
+
+\item \textbf{Why EWC prevents forgetting}: Elastic Weight Consolidation doesn't protect the ``optimal'' parameters for a task, but rather the trajectory taken while learning it. The Fisher information encodes which directions were important during learning, not at convergence.
+\end{enumerate}
+
+\begin{remark}[Two Regimes of Fisher Flow]
+Fisher Flow operates in two distinct regimes:
+\begin{itemize}
+\item \textbf{Classical Statistical Regime}: When convergence to a local maximum is achieved, Fisher Flow provides principled uncertainty quantification with all the guarantees of maximum likelihood theory.
+\item \textbf{Modern ML Regime}: When optimization stops before convergence, Fisher Flow acts as a trajectory-dependent geometric regularizer that encodes the path through parameter space.
+\end{itemize}
+Both interpretations are valid and useful, but serve different purposes.
+\end{remark}
 
 \subsection{Approximation Theory for Relaxed Information Geometry}
 
@@ -481,7 +543,7 @@ Amari's natural gradient \cite{amari1998natural} is essentially Fisher Flow with
 
 \subsection{Connections to Modern Deep Learning}
 
-Recent work on second-order optimization \cite{botev2017practical}, uncertainty quantification \cite{zhang2018noisy}, and continual learning \cite{kirkpatrick2017overcoming} independently rediscovered aspects of Fisher Flow. We show these are special cases of a general principle.
+Recent work on second-order optimization \cite{martens2015optimizing}, predictive calibration and uncertainty for neural nets \cite{guo2017calibration}, and continual learning \cite{kirkpatrick2017overcoming} independently rediscovered aspects of Fisher Flow. We show these are special cases of a general principle.
 
 \section{Deep Parallels to Bayesian Inference}
 
@@ -519,9 +581,9 @@ The following table provides a concise summary of these parallels:
 Concept & Bayesian & Fisher Flow (Frequentist) \\
 \midrule
 Initial State & Prior $p(\theta)$ & Initial $(\hat\theta_0, \mathcal{I}_0)$ / regularizer \\
-Central Estimate & $\mathbb E[\theta\mid x]$ & $\hat\theta_{t} \leftarrow \hat{\mathcal I}_{t}^{-1}\bigl(\hat{\mathcal I}_{t-1}\hat\theta_{t-1} + \hat{\mathcal I}_{B_t}\hat\theta_{B_t}\bigr)$ \\
-Uncertainty (Precision) & Posterior precision, e.g., $(\text{Cov}(\theta|x))^{-1}$ & $\hat{\mathcal I}_{t} \leftarrow \hat{\mathcal I}_{t-1} + \hat{\mathcal I}_{B_t}$ \\
-Predictive Distribution & $\int p(x_{\text{new}}|\theta)p(\theta|x)d\theta$ & Plug-in $\hat\theta_t$, optionally propagate $\mathcal{I}_t^{-1}$ \\
+Central Estimate & $\mathbb E[\theta\mid x_{1:n}]$ & $\hat\theta_{n} \leftarrow \hat{\mathcal I}_{n}^{-1}\bigl(\hat{\mathcal I}_{n-k}\hat\theta_{n-k} + \hat{\mathcal I}_{B}\hat\theta_{B}\bigr)$ \\
+Uncertainty (Precision) & Posterior precision, e.g., $(\text{Cov}(\theta|x_{1:n}))^{-1}$ & $\hat{\mathcal I}_{n} \leftarrow \hat{\mathcal I}_{n-k} + \hat{\mathcal I}_{B}$ where $|B|=k$ \\
+Predictive Distribution & $\int p(x_{\text{new}}|\theta)p(\theta|x_{1:n})d\theta$ & Plug-in $\hat\theta_n$, optionally propagate $\mathcal{I}_n^{-1}$ \\
 Semantics of Uncertainty & Epistemic belief & Sampling variability \\
 \bottomrule
 \end{tabular}
@@ -545,14 +607,14 @@ For Cauchy-distributed errors, the Fisher information may not exist. Fisher Flow
 
 \subsection{Optimality Properties}
 
-\begin{theorem}[Information-Theoretic Optimality]
+\begin{conjecture}[Information-Theoretic Optimality]
 \label{thm:info_optimality}
-Among all estimators that use only first and second-order information, Fisher Flow achieves the minimum expected KL divergence from the true distribution:
+Among a suitable class of estimators that use only first- and second-order information, Fisher Flow minimizes the expected KL divergence from the true distribution:
 \begin{equation}
 \hat{\theta}_{\text{FF}} = \arg\min_{\hat{\theta} \in \mathcal{E}_2} \mathbb{E}[D_{KL}(p_{\theta_0} \| p_{\hat{\theta}})]
 \end{equation}
-where $\mathcal{E}_2$ is the class of second-order estimators.
-\end{theorem}
+where $\mathcal{E}_2$ is an appropriately defined class of second-order estimators.
+\end{conjecture}
 
 \begin{theorem}[Invariance Properties]
 Fisher Flow satisfies:
@@ -565,7 +627,7 @@ Fisher Flow satisfies:
 
 \subsection{Fundamental Limitations}
 
-\begin{theorem}[No Free Lunch for Information Geometry]
+\begin{conjecture}[No Free Lunch for Information Geometry]
 \label{thm:no_free_lunch}
 There exists no universal approximation $\tilde{\mathcal{I}}$ that simultaneously:
 \begin{enumerate}
@@ -573,11 +635,7 @@ There exists no universal approximation $\tilde{\mathcal{I}}$ that simultaneousl
 \item Maintains positive definiteness
 \item Achieves $(1+\epsilon)$-approximation for all models
 \end{enumerate}
-\end{theorem}
-
-\begin{proof}[Proof Sketch]
-Consider adversarial construction where true $\mathcal{I}$ has eigenvalues spanning exponential range. Any $\mathcal{O}(d)$ approximation must lose spectral information, violating either positive definiteness or approximation quality.
-\end{proof}
+\end{conjecture}
 
 \subsection{Comparison with Alternative Frameworks}
 
@@ -604,13 +662,13 @@ Non-regular models & \checkmark & $\times$ & $\times$ \\
 
 Fisher Flow exhibits profound connections to statistical mechanics and thermodynamics:
 
-\begin{theorem}[Information as Statistical Entropy]
-The log-determinant of Fisher information relates to the entropy of the parameter distribution:
+\begin{proposition}[Entropy under Gaussian Approximation]
+Under a Gaussian approximation to parameter uncertainty with covariance $\mathcal I(\theta)^{-1}$, the differential entropy satisfies:
 \begin{equation}
 S(\theta) = \frac{k}{2}\log\det(2\pi e \mathcal{I}^{-1})
 \end{equation}
 where $k$ is a scaling constant (analogous to Boltzmann's constant).
-\end{theorem}
+\end{proposition}
 
 This connection suggests that Fisher Flow updates follow a principle of maximum entropy production, moving parameters along paths that maximize information gain subject to constraints.
 
@@ -631,13 +689,13 @@ This unification suggests that practitioners are already using Fisher Flow appro
 
 Fisher Flow can be viewed through the lens of stochastic optimal control:
 
-\begin{theorem}[Fisher Flow as Bellman Equation]
-The value function $V(\theta, t) = -\log p(\theta|x_{1:t})$ satisfies a Hamilton-Jacobi-Bellman equation:
+\begin{remark}[Control-Theoretic View]
+With additional modeling assumptions, one can define a value function $V(\theta, t)$ and write a Hamilton--Jacobi--Bellman equation:
 \begin{equation}
 \frac{\partial V}{\partial t} + \min_u \left\{\nabla V \cdot f(\theta, u) + \frac{1}{2}\text{Tr}(\sigma\sigma^\top \nabla^2 V)\right\} = 0
 \end{equation}
-where the optimal control $u^*$ recovers the natural gradient direction.
-\end{theorem}
+where an optimal control $u^*$ would recover a natural-gradient-like direction. Making this rigorous requires a concrete control formulation.
+\end{remark}
 
 This perspective connects Fisher Flow to reinforcement learning and provides tools for analyzing convergence through Lyapunov theory.
 
@@ -680,7 +738,7 @@ Let $T(X)$ be a sufficient statistic for $\theta$. By the factorization theorem:
 \begin{equation}
 p(x|\theta) = g(T(x), \theta)h(x)
 \end{equation}
-The invariance requirement demands that the metric computed from $p(x|\theta)$ equals that from $g(t, \theta)$. This uniquely determines the Fisher-Rao metric (Chentsov's theorem \cite{chentsov1982statistical}).
+The invariance requirement demands that the metric computed from $p(x|\theta)$ equals that from $g(t, \theta)$. This uniquely determines the Fisher-Rao metric (see, e.g., expositions in \cite{amari2016information}).
 \end{proof}
 
 \subsection{Dual Connections and Information Geometry}
@@ -716,53 +774,49 @@ with equality if and only if $Y$ is a sufficient statistic.
 \end{theorem}
 
 \begin{proof}
-By the chain rule for Fisher information:
-\begin{equation}
-\mathcal{I}_X(\theta) = \mathcal{I}_Y(\theta) + \mathbb{E}[\mathcal{I}_{X|Y}(\theta)]
-\end{equation}
-Since $\mathcal{I}_{X|Y}(\theta) \succeq 0$, the inequality follows. Equality holds when $\mathcal{I}_{X|Y}(\theta) = 0$, which occurs precisely when $Y$ is sufficient.
+Let $s_X := \nabla_\theta \log p(X\mid\theta)$ and $s_Y := \mathbb E[s_X\mid Y]$. Then $\mathcal I_X(\theta)=\mathrm{Var}(s_X)$ and $\mathcal I_Y(\theta)=\mathrm{Var}(s_Y)$. By the law of total variance, $\mathrm{Var}(s_X) = \mathbb E[\mathrm{Var}(s_X\mid Y)] + \mathrm{Var}(\mathbb E[s_X\mid Y]) \succeq \mathrm{Var}(\mathbb E[s_X\mid Y])$, hence $\mathcal I_X(\theta) \succeq \mathcal I_Y(\theta)$ with equality iff $\mathrm{Var}(s_X\mid Y)=0$ almost surely, i.e., $Y$ is sufficient.
 \end{proof}
 
 This theorem justifies Fisher Flow's focus on accumulating all available information: any summarization or preprocessing can only decrease the information available for inference.
 
 \subsection{Variational Characterization of Fisher Flow}
 
-\begin{theorem}[Fisher Flow as Proximal Optimization]
+\begin{theorem}[Local Quadratic Proximal Update]
 \label{thm:proximal}
-The Fisher Flow update can be expressed as the solution to a proximal optimization problem:
+The Fisher Flow update after observing batch $B$ (bringing total observations from $n$ to $n+|B|$) admits the following local quadratic proximal form:
 \begin{equation}
-\hat{\theta}_{t+1} = \arg\min_{\theta} \left\{-\ell_{B_t}(\theta) + \frac{1}{2}(\theta - \hat{\theta}_t)^\top \mathcal{I}_t (\theta - \hat{\theta}_t)\right\}
+\hat{\theta}_{n+|B|} = \arg\min_{\theta} \left\{-\ell_{B}(\theta) + \frac{1}{2}(\theta - \hat{\theta}_n)^\top \mathcal{I}_n (\theta - \hat{\theta}_n)\right\}
 \end{equation}
-where the second term is the Bregman divergence induced by the log-partition function.
+where the second term is a quadratic penalty induced by the accumulated Fisher information from the first $n$ observations.
 \end{theorem}
 
 \begin{proof}
 The first-order optimality condition yields:
 \begin{equation}
--s_{B_t}(\hat{\theta}_{t+1}) + \mathcal{I}_t(\hat{\theta}_{t+1} - \hat{\theta}_t) = 0
+-s_{B}(\hat{\theta}_{n+|B|}) + \mathcal{I}_n(\hat{\theta}_{n+|B|} - \hat{\theta}_n) = 0
 \end{equation}
-Linearizing the score around $\hat{\theta}_t$:
+Linearizing the score around $\hat{\theta}_n$:
 \begin{equation}
-s_{B_t}(\hat{\theta}_{t+1}) \approx s_{B_t}(\hat{\theta}_t) + \mathcal{I}_{B_t}(\hat{\theta}_{t+1} - \hat{\theta}_t)
+s_{B}(\hat{\theta}_{n+|B|}) \approx s_{B}(\hat{\theta}_n) + \hat{\mathcal{I}}_{B}(\hat{\theta}_{n+|B|} - \hat{\theta}_n)
 \end{equation}
 Substituting and solving recovers the Fisher Flow update equation.
 \end{proof}
 
-This variational perspective connects Fisher Flow to mirror descent \cite{nemirovski1983problem} and reveals its implicit regularization structure.
+This variational perspective connects Fisher Flow to mirror-descent-like updates and reveals its implicit regularization structure.
 
 \subsection{Optimal Transport and Wasserstein Geometry}
 
 Fisher Flow admits an elegant interpretation through optimal transport theory:
 
-\begin{theorem}[Fisher Flow as Wasserstein Gradient Flow]
-The continuous-time Fisher Flow dynamics minimize the Wasserstein distance between the empirical distribution and the model family:
+\begin{remark}[Heuristic Wasserstein Perspective]
+The continuous-time Fisher Flow dynamics can be heuristically related to gradient flows on spaces of distributions:
 \begin{equation}
 \frac{d\theta}{dt} = -\nabla_{W_2} D_{KL}(\hat{p}_n \| p_\theta)
 \end{equation}
-where $\nabla_{W_2}$ denotes the Wasserstein gradient.
-\end{theorem}
+where $\nabla_{W_2}$ denotes a Wasserstein gradient. A precise link requires additional structure and is beyond our scope.
+\end{remark}
 
-This perspective unifies Fisher Flow with recent developments in gradient flows on probability spaces \cite{ambrosio2008gradient} and provides a bridge to modern computational optimal transport.
+This perspective informally connects Fisher Flow to developments in gradient flows on probability spaces and provides a bridge to optimal transport intuitions.
 
 \subsection{Practical Implementation Guidelines}
 
@@ -823,18 +877,20 @@ We present Fisher Flow at multiple levels of abstraction, from the theoretical i
 \begin{algorithmic}[1]
 \Require Structure selector $\mathcal{S}$, approximation level $k$
 \State $\theta_0 \gets$ initialize parameters
-\State $\mathcal{I}_0 \gets$ initialize information structure
-\For{each batch $B_t$}
-\State // Adaptive structure selection
-\If{$t \mod k = 0$}
-\State $\text{struct} \gets \mathcal{S}(\mathcal{I}_t, B_t)$ \Comment{Choose: diagonal, block, Kronecker, etc.}
+\State $\mathcal{I}_0 \gets$ initialize information structure  
+\State $n \gets 0$ \Comment{Total observations counter}
+\For{batch $B$ in data stream} \Comment{Process batches sequentially}
+\State // Adaptive structure selection (every $k$ batches)
+\If{batch index $\mod k = 0$}
+\State $\text{struct} \gets \mathcal{S}(\mathcal{I}_n, B)$ \Comment{Choose: diagonal, block, Kronecker, etc.}
 \EndIf
-\State // Information accumulation
-\State $s_t \gets \nabla_\theta \ell_{B_t}(\theta_t)$
-\State $\tilde{\mathcal{I}}_{B_t} \gets \text{ApproxFIM}(B_t, \theta_t, \text{struct})$
-\State $\mathcal{I}_t \gets \mathcal{I}_{t-1} + \tilde{\mathcal{I}}_{B_t}$
+\State // Information accumulation from batch
+\State $s_B \gets \nabla_\theta \ell_{B}(\theta_n)$ \Comment{Batch gradient}
+\State $\tilde{\mathcal{I}}_{B} \gets \text{ApproxFIM}(B, \theta_n, \text{struct})$
+\State $\mathcal{I}_{n+|B|} \gets \mathcal{I}_n + \tilde{\mathcal{I}}_{B}$
 \State // Natural gradient step
-\State $\theta_{t+1} \gets \theta_t - \eta_t \cdot \text{Solve}(\mathcal{I}_t, s_t, \text{struct})$
+\State $\theta_{n+|B|} \gets \theta_n - \eta \cdot \text{Solve}(\mathcal{I}_{n+|B|}, s_B, \text{struct})$
+\State $n \gets n + |B|$ \Comment{Update total observation count}
 \EndFor
 \end{algorithmic}
 \end{algorithm}
@@ -1042,17 +1098,36 @@ MC Dropout & 0.982 & 0.065 & 0.011 & 156.8 \\
 \item Uncertainty estimates from Fisher Flow closely match expensive Bayesian methods
 \end{itemize}
 
+\section{Experiments}
+\subsection{Setup}
+Models, datasets, and training protocols used; computing resources and software versions.
+
+\subsection{Baselines}
+Compare against full/variational Bayes where feasible, MAP, SGD/Adam, K-FAC/natural gradient.
+
+\subsection{Datasets}
+Synthetic regression/classification; real benchmarks (e.g., UCI, CIFAR-10/100, small NLP tasks).
+
+\subsection{Metrics}
+Parameter error, predictive log-likelihood, calibration (ECE), coverage of confidence intervals, wall-clock and memory.
+
+\subsection{Results}
+Tables/plots showing accuracy vs. compute; uncertainty quality; ablations over information structure (scalar/diagonal/block/kronecker).
+
+\subsection{Ablations and Sensitivity}
+Effect of damping, forgetting, batch size; approximation rank; distributed aggregation.
+
 \section{Illustrative Example: Deep Learning Model Training}
 Consider training a deep neural network (DNN) for classification using a cross-entropy loss, which is equivalent to maximizing the log-likelihood of a categorical distribution. Fisher Flow provides a lens to understand and enhance this process:
 
 \begin{itemize}
-  \item \textbf{Stochastic Updates as Fisher Flow Steps}: Training with mini-batches can be viewed as a sequence of Fisher Flow updates. For each mini-batch $B_t$:
+  \item \textbf{Stochastic Updates as Fisher Flow Steps}: Training with mini-batches can be viewed as a sequence of Fisher Flow updates. After processing $n$ observations, when we receive a new mini-batch $B$ with $|B|$ observations:
   \begin{enumerate}
-    \item The gradient of the loss $\nabla_\theta \mathcal{L}_{B_t}$ is the negative score $-s_{B_t}(\theta)$.
-    \item The (approximate) Fisher Information Matrix $\mathcal{I}_{B_t}$ can be estimated (e.g., using empirical FIM, diagonal approximations like in Adam/RMSProp, or Kronecker-factored approximations).
-    \item An optimizer step, especially one like natural gradient descent, takes the form $\theta_{t} \leftarrow \theta_{t-1} - \eta \mathcal{I}_{B_t}^{-1} s_{B_t}(\theta_{t-1})$, directly analogous to the Fisher Flow update, or more generally, $\theta_t \leftarrow \mathcal{I}_t^{-1}(\mathcal{I}_{t-1}\theta_{t-1} + \mathcal{I}_{B_t}\hat\theta_{B_t})$ if we consider $\hat\theta_{B_t}$ as the conceptual MLE for that batch.
+    \item The gradient of the loss $\nabla_\theta \mathcal{L}_{B}$ is the negative score $-s_{B}(\theta)$.
+    \item The (approximate) Fisher Information Matrix $\hat{\mathcal{I}}_{B}$ can be estimated (e.g., using empirical FIM, diagonal approximations like in Adam/RMSProp, or Kronecker-factored approximations).
+    \item An optimizer step, especially one like natural gradient descent, takes the form $\theta_{n+|B|} \leftarrow \theta_{n} - \eta \, \hat{\mathcal{I}}_{B}^{-1} s_{B}(\theta_{n})$, directly analogous to the Fisher Flow update, or more generally, $\theta_{n+|B|} \leftarrow \mathcal{I}_{n+|B|}^{-1}(\mathcal{I}_{n}\theta_{n} + \hat{\mathcal{I}}_{B}\hat\theta_{B})$ if we consider $\hat\theta_{B}$ as the conceptual MLE for that batch.
   \end{enumerate}
-  \item \textbf{Information Accumulation and Regularization}: The total information $\mathcal{I}_t = \sum_k \mathcal{I}_{B_k}$ (or a running average) reflects the model's accumulated knowledge. Techniques like Elastic Weight Consolidation (EWC) \cite{kirkpatrick2017overcoming} for continual learning explicitly use the FIM to penalize changes to parameters important for previous tasks, which is a direct application of Fisher Flow's information-weighting principle.
+  \item \textbf{Information Accumulation and Regularization}: The total information after $N$ observations $\mathcal{I}_N = \sum_{i=1}^N \hat{\mathcal{I}}_i$ (or equivalently $\sum_{\text{batches}} \hat{\mathcal{I}}_{B}$) reflects the model's accumulated knowledge. Techniques like Elastic Weight Consolidation (EWC) \cite{kirkpatrick2017overcoming} for continual learning explicitly use the FIM to penalize changes to parameters important for previous tasks, which is a direct application of Fisher Flow's information-weighting principle.
   \item \textbf{Uncertainty and Model Analysis}: Approximations to the FIM provide insights into parameter uncertainty, which, while not typically used for interpreting individual parameters in large DNNs, are instrumental for deriving \textit{predictive uncertainty} for model outputs (e.g., class probabilities or next-token distributions). The inverse FIM, $\mathcal{I}_t^{-1}$, offers a principled (though approximate) covariance matrix for $\hat{\theta}_t$, forming the basis for sampling parameters to estimate the variability of predictions. Furthermore, FIM-derived metrics can identify parameter sensitivities, guide pruning or quantization, and inform training dynamics like early stopping based on information saturation.
 \end{itemize}
 While full FIM computation is often intractable for large DNNs, the Fisher Flow framework motivates and provides theoretical grounding for many successful heuristics and approximations used in modern deep learning, framing them as attempts to efficiently propagate likelihood-derived information.
@@ -1063,16 +1138,16 @@ While full FIM computation is often intractable for large DNNs, the Fisher Flow 
 
 We can now present a unified view of Fisher Flow that connects its various mathematical aspects:
 
-\begin{theorem}[Master Equation of Fisher Flow]
+\begin{conjecture}[Master Equation of Fisher Flow]
 \label{thm:master}
-The Fisher Flow dynamics can be expressed equivalently as:
+Under additional regularity and model assumptions, the Fisher Flow dynamics can be expressed equivalently as:
 \begin{align}
 \text{(Geometric):} \quad & \frac{d\theta}{dt} = -\tilde{\nabla} \ell(\theta) \\
 \text{(Variational):} \quad & \theta_{t+\delta t} = \arg\min_\theta \left\{D_{KL}(p_\theta \| p_{\theta_t}) - \delta t \cdot \ell(\theta)\right\} \\
 \text{(Information):} \quad & \frac{d\mathcal{I}}{dt} = \mathbb{E}[s(\theta)s(\theta)^\top]
 \end{align}
 where all three formulations yield identical parameter trajectories.
-\end{theorem}
+\end{conjecture}
 
 This unification reveals Fisher Flow as a fundamental geometric principle rather than an ad-hoc algorithm.
 
@@ -1262,7 +1337,28 @@ Sometimes the biggest contribution isn't inventing something new—it's recogniz
 By naming this pattern, we make it visible, teachable, and extendable. That's the real contribution: not just another algorithm, but a new way of thinking about an old problem. And sometimes, that's exactly what a field needs to move forward.
 
 
-\bibliographystyle{unsrt} % Or your preferred style
-\bibliography{references} % Assuming your file is named references.bib
+\begin{thebibliography}{99}
+\bibitem{amari1998natural} Amari, S. (1998). Natural gradient works efficiently in learning. Neural Computation, 10(2), 251--276.
+\bibitem{amari2016information} Amari, S. (2016). Information Geometry and Its Applications. Springer.
+\bibitem{devlin2018bert} Devlin, J., Chang, M.-W., Lee, K., Toutanova, K. (2018). BERT: Pre-training of deep bidirectional transformers for language understanding. arXiv:1810.04805.
+\bibitem{efron1978assessing} Efron, B., Hinkley, D. V. (1978). Assessing the accuracy of the maximum likelihood estimator: Observed versus expected Fisher information. Biometrika, 65(3), 457--487.
+\bibitem{fisher1925statistical} Fisher, R. A. (1925). Statistical Methods for Research Workers. Oliver and Boyd.
+\bibitem{guo2017calibration} Guo, C., Pleiss, G., Sun, Y., Weinberger, K. Q. (2017). On calibration of modern neural networks. ICML (PMLR 70), 1321--1330.
+\bibitem{hochreiter1997flat} Hochreiter, S., Schmidhuber, J. (1997). Flat minima. Neural Computation, 9(1), 1--42.
+\bibitem{jeffreys1939theory} Jeffreys, H. (1939). Theory of Probability. Oxford University Press.
+\bibitem{keskar2017large} Keskar, N. S., Mudigere, D., Nocedal, J., Smelyanskiy, M., Tang, P. T. P. (2017). On large-batch training for deep learning: Generalization gap and sharp minima. ICLR.
+\bibitem{kingma2014adam} Kingma, D. P., Ba, J. (2014). Adam: A method for stochastic optimization. arXiv:1412.6980.
+\bibitem{kirkpatrick2017overcoming} Kirkpatrick, J. et al. (2017). Overcoming catastrophic forgetting in neural networks. PNAS, 114(13), 3521--3526.
+\bibitem{ljung1983theory} Ljung, L. (1983). Theory and Practice of Recursive Identification. MIT Press.
+\bibitem{martens2015optimizing} Martens, J., Grosse, R. (2015). Optimizing neural networks with Kronecker-factored approximate curvature. ICML (PMLR 37), 1107--1115.
+\bibitem{parisi2019continual} Parisi, G. I., Kemker, R., Part, J. L., Kanan, C., Wermter, S. (2019). Continual lifelong learning with neural networks: A review. Neural Networks, 113, 54--71.
+\bibitem{radford2018improving} Radford, A., Narasimhan, K., Salimans, T., Sutskever, I. (2018). Improving language understanding by generative pre-training. OpenAI Blog.
+\bibitem{rao1945information} Rao, C. R. (1945). Information and the accuracy attainable in the estimation of statistical parameters. Bull. Calcutta Math. Soc., 37, 81--91.
+\bibitem{robert2007bayesian} Robert, C. P. (2007). The Bayesian Choice. Springer.
+\bibitem{settles2009active} Settles, B. (2009). Active learning literature survey. Technical Report 1648, University of Wisconsin--Madison.
+\bibitem{tierney1986accurate} Tierney, L., Kadane, J. B. (1986). Accurate approximations for posterior moments and marginal densities. JASA, 81(393), 82--86.
+\bibitem{vanderVaart1998asymptotic} van der Vaart, A. W. (1998). Asymptotic Statistics. Cambridge University Press.
+\bibitem{holtzman2019curious} Holtzman, A., Buys, J., Du, L., Forbes, M., Choi, Y. (2020). The curious case of neural text degeneration. ICLR.
+\end{thebibliography}
 
 \end{document}

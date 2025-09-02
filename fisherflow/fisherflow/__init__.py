@@ -8,7 +8,6 @@ are special cases of propagating Fisher information rather than probability dist
 from .core import FisherFlowEstimator, FisherInformation
 from .optimizers import (
     DiagonalFisherFlow,
-    FullFisherFlow,
     KroneckerFisherFlow,
     AdamAsFisherFlow,
     NaturalGradientFlow
@@ -22,7 +21,6 @@ __all__ = [
     "FisherFlowEstimator",
     "FisherInformation",
     "DiagonalFisherFlow",
-    "FullFisherFlow",
     "KroneckerFisherFlow",
     "AdamAsFisherFlow",
     "NaturalGradientFlow",
