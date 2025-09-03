@@ -1,0 +1,171 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,amsthm}
+
+\title{Fisher Flow: An Information-Geometric Framework for Sequential Estimation\\
+\large (Revised Sections for Modern ML Context)}
+
+\begin{document}
+
+\section*{Revised Abstract}
+
+We present Fisher Flow (FF), a framework for sequential statistical inference that propagates Fisher information along parameter trajectories. Unlike classical maximum likelihood theory which assumes convergence to local optima, Fisher Flow provides a dual interpretation suited to both classical statistics and modern machine learning. In the classical regime where parameters converge to local maxima, Fisher Flow achieves the Cramér-Rao efficiency bound and recovers Bayesian posteriors for exponential families. However, modern deep learning rarely operates in this regime—instead using early stopping, regularization, and overparameterization to avoid overfitting. 
+
+In this modern context, Fisher Flow acts as a \emph{trajectory-dependent geometric regularizer} that accumulates information along optimization paths rather than at convergence points. This perspective unifies and explains modern optimization methods: Adam accumulates trajectory geometry rather than convergence curvature, Elastic Weight Consolidation protects learning paths rather than optimal parameters, and natural gradient methods navigate using local rather than global geometry. We prove that trajectory-accumulated Fisher information provides implicit regularization through incomplete exploration of parameter space. Empirical validation demonstrates that Fisher Flow's trajectory interpretation better explains optimization dynamics in neural networks while maintaining computational efficiency for uncertainty quantification when convergence is achieved.
+
+\section*{Revised Introduction}
+
+\subsection*{The Two Regimes of Fisher Flow}
+
+Modern machine learning has diverged from classical statistics in a fundamental way: we rarely converge to local optima of our objective functions. Instead, we employ early stopping, dropout, weight decay, and other regularization techniques to prevent overfitting in overparameterized models. This creates a paradox for classical statistical theory, which assumes we analyze the properties of estimators at convergence.
+
+Fisher Flow resolves this paradox by providing a unified framework that works in both regimes:
+
+\begin{enumerate}
+\item \textbf{Classical Regime}: When optimization converges to a local maximum (common in traditional statistics, rare in modern ML), Fisher Flow provides all the theoretical guarantees of maximum likelihood estimation—consistency, asymptotic normality, and efficiency.
+
+\item \textbf{Trajectory Regime}: When optimization stops before convergence (standard in modern ML), Fisher Flow accumulates geometric information along the parameter trajectory, providing implicit regularization and explaining why methods like Adam and EWC work in practice.
+\end{enumerate}
+
+\subsection*{Motivating Example: Why Adam Works}
+
+Consider training a neural network with Adam optimizer. Classical theory would suggest Adam approximates natural gradient descent at convergence, using the diagonal of the Fisher Information Matrix at the optimum. But we never reach this optimum—we stop early to prevent overfitting.
+
+What Adam actually does is accumulate second moments $\mathbb{E}[g_t^2]$ along the \emph{entire trajectory}:
+\begin{equation}
+v_t = \beta_2 v_{t-1} + (1-\beta_2) g_t^2
+\end{equation}
+
+This is not estimating the Fisher Information at a fixed point, but building a trajectory-dependent preconditioner that captures the geometry encountered during optimization. Fisher Flow formalizes this as:
+\begin{equation}
+\mathcal{I}_{\text{traj}} = \sum_{t=1}^T \alpha_t \hat{\mathcal{I}}(\theta_t)
+\end{equation}
+where $\alpha_t$ are trajectory weights (e.g., exponential decay in Adam).
+
+\subsection*{Rethinking Classical Guarantees}
+
+The classical properties we prove for Fisher Flow—achieving the Cramér-Rao bound, asymptotic normality, consistency—remain valid but require reinterpretation:
+
+\begin{itemize}
+\item \textbf{Cramér-Rao Bound}: In classical regime, bounds parameter uncertainty. In trajectory regime, describes geometric efficiency of the path.
+
+\item \textbf{Asymptotic Normality}: In classical regime, describes distribution at convergence. In trajectory regime, characterizes uncertainty along the path.
+
+\item \textbf{Information Accumulation}: In classical regime, reduces uncertainty about true parameters. In trajectory regime, encodes which directions in parameter space have been explored.
+\end{itemize}
+
+\subsection*{Core Insight: Information as Path Memory}
+
+The key insight is that Fisher Information in modern ML is not about uncertainty at an optimum, but about \emph{memory of the optimization path}. This explains:
+
+\begin{enumerate}
+\item \textbf{Why early stopping works}: Stopping before convergence maintains high uncertainty (low information) in unexplored directions, providing implicit regularization.
+
+\item \textbf{Why EWC prevents catastrophic forgetting}: It preserves information about the path taken while learning previous tasks, not about optimal parameters.
+
+\item \textbf{Why Adam outperforms SGD}: It builds a richer geometric model of the trajectory, not just current gradients.
+
+\item \textbf{Why natural gradient helps}: It uses local geometry to navigate, without assuming global convergence.
+\end{enumerate}
+
+\section*{Revised Mathematical Framework}
+
+\subsection*{Trajectory-Dependent Fisher Information}
+
+Instead of assuming convergence to $\theta^*$, we define Fisher Flow for arbitrary trajectories:
+
+\begin{definition}[Trajectory Fisher Information]
+For a parameter trajectory $\{\theta_t\}_{t=0}^T$ and data sequence $\{B_t\}_{t=0}^T$, the trajectory-accumulated Fisher Information is:
+\begin{equation}
+\mathcal{I}_{\text{traj}} = \sum_{t=0}^T w_t \hat{\mathcal{I}}_{B_t}(\theta_t)
+\end{equation}
+where $w_t$ are trajectory weights (e.g., uniform, exponential decay, or adaptive).
+\end{definition}
+
+This generalizes classical Fisher Information (which assumes all $\theta_t = \theta^*$) to arbitrary paths through parameter space.
+
+\begin{theorem}[Implicit Regularization via Incomplete Information]
+For an overparameterized model with parameters $\theta \in \mathbb{R}^d$ where $d \gg n$ (data size), early stopping at time $T$ yields:
+\begin{equation}
+\text{rank}(\mathcal{I}_{\text{traj}}) \leq \min(T \cdot |B|, n)
+\end{equation}
+The null space of $\mathcal{I}_{\text{traj}}$ defines directions of maximal uncertainty, providing implicit regularization by preventing arbitrary changes in these directions.
+\end{theorem}
+
+\subsection*{Connections to Modern Optimizers}
+
+We can now properly characterize modern optimizers as trajectory-dependent Fisher Flow variants:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Method} & \textbf{Classical View} & \textbf{Trajectory View} \\
+\midrule
+SGD & Gradient descent & Trajectory with no memory \\
+Adam & Diagonal natural gradient & Exponentially weighted trajectory geometry \\
+RMSprop & Adaptive learning rates & Running average of trajectory curvature \\
+Natural Gradient & Full Fisher at optimum & Local geometry along trajectory \\
+EWC & Parameter importance & Path-dependent information accumulation \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section*{Implications for Practice}
+
+\subsection*{When to Use Which Interpretation}
+
+\begin{itemize}
+\item \textbf{Use Classical Fisher Flow when}:
+  - Problem is well-specified with clear optimum
+  - Model is not overparameterized  
+  - Convergence is achievable and desired
+  - Uncertainty quantification at optimum is needed
+
+\item \textbf{Use Trajectory Fisher Flow when}:
+  - Training deep neural networks
+  - Using early stopping or regularization
+  - Model is overparameterized
+  - Continual or online learning scenarios
+\end{itemize}
+
+\subsection*{Practical Algorithm Modifications}
+
+The trajectory perspective suggests modifications to existing algorithms:
+
+\begin{algorithm}[h]
+\caption{Trajectory-Aware Fisher Flow}
+\begin{algorithmic}[1]
+\State Initialize $\theta_0$, $\mathcal{I}_0 = \epsilon I$
+\For{$t = 1$ to $T$}
+    \State Compute gradient $g_t = \nabla \mathcal{L}_{B_t}(\theta_{t-1})$
+    \State Estimate batch Fisher $\hat{\mathcal{I}}_{B_t}(\theta_{t-1})$
+    \State Update trajectory information:
+    \State \quad $\mathcal{I}_t = \gamma \mathcal{I}_{t-1} + (1-\gamma) \hat{\mathcal{I}}_{B_t}(\theta_{t-1})$
+    \State Update parameters:
+    \State \quad $\theta_t = \theta_{t-1} - \eta \mathcal{I}_t^{-1} g_t$
+    \State \textbf{Key}: Do not assume $\theta_t$ converges
+\EndFor
+\Return $\theta_T$, $\mathcal{I}_T$ (trajectory information, not convergence information)
+\end{algorithmic}
+\end{algorithm}
+
+\section*{Revised Conclusions}
+
+Fisher Flow provides a unifying framework for understanding optimization and uncertainty in both classical and modern machine learning contexts. The key insight is recognizing that modern ML operates in a fundamentally different regime where:
+
+1. **Information accumulates along trajectories, not at convergence points**
+2. **Uncertainty represents unexplored directions, not parameter variance**  
+3. **Regularization emerges from incomplete information, not prior beliefs**
+4. **Optimization methods navigate using local geometry, not global structure**
+
+This dual interpretation explains why methods developed for classical MLE (natural gradient, Fisher scoring) have been successfully adapted to modern deep learning despite violating classical assumptions. Fisher Flow shows these methods work not because they approximate behavior at non-existent optima, but because they efficiently propagate geometric information along optimization trajectories.
+
+Future work should focus on:
+- Optimal trajectory weighting schemes for different problem classes
+- Connections between trajectory information and generalization bounds
+- Online selection of trajectory vs. convergence interpretation
+- Efficient approximations tailored to trajectory regime
+
+By embracing the trajectory perspective as primary rather than exceptional, Fisher Flow provides a more honest and useful framework for modern machine learning while maintaining rigorous connections to classical statistical theory when appropriate.
+
+\end{document}
